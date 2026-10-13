@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <mask id="fingerprint-cutouts" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M61 169V108C61 72 87 47 120 47C150 47 174 67 180 97" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+      <path d="M86 214V113C86 93 101 78 120 78C139 78 154 93 154 113V214" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+      <path d="M111 214V121C111 115 115 111 120 111C125 111 129 115 129 121V214" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <path d="M40 214V105C40 57 75 25 120 25C165 25 200 58 200 105V214H40Z" fill="#E43D36" mask="url(#fingerprint-cutouts)"/>
+  <path d="M199 31L204 43L216 48L204 53L199 65L194 53L182 48L194 43L199 31Z" fill="#E43D36"/>
+  <path d="M220 67L222.7 73.3L229 76L222.7 78.7L220 85L217.3 78.7L211 76L217.3 73.3L220 67Z" fill="#E43D36"/>
+  <circle cx="225" cy="52" r="3.5" fill="#E43D36"/>
+</svg>

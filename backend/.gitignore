@@ -1,0 +1,32 @@
+# ===== 编译产物 =====
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/dist/
+
+# ===== 测试产物 =====
+*.test
+*.out
+coverage.out
+/.gocache/
+
+# ===== 运行时数据与日志 =====
+/data/
+/logs/
+*.log
+
+# ===== 本地环境与密钥 =====
+.env
+.env.*
+!.env.example
+
+# ===== IDE =====
+.idea/
+.vscode/
+.DS_Store
+
+# ===== 依赖 =====
+/vendor/

@@ -1,0 +1,60 @@
+Service:
+  Name: fortunefinger
+  Host: 0.0.0.0
+  Port: 6327
+
+Log:
+  ServiceName: fortunefinger
+  Mode: console
+  Path: ./logs
+  Encoding: json
+  Level: debug
+  Compress: false
+  KeepDays: 30
+
+Database:
+  Sources:
+    main:
+      Driver: mysql
+      Host: localhost
+      Port: 3306
+      User: fortune
+      Password: fortunefinger@2026_lottery
+      DBName: fortunefinger
+      SSLMode: disable
+      Required: true
+      MaxOpenConns: 50
+      MaxIdleConns: 20
+      ConnMaxLifetime: 4h
+      ConnMaxIdleTime: 10m
+      SlowThreshold: 500ms
+
+Redis:
+  Host: localhost:6379
+  Password: ""
+  DB: 0
+
+JWT:
+  Secret: "fortunefinger-local-jwt-secret-change-me-2026"
+  Issuer: fortunefinger
+  Audience: fortunefinger-user
+  AccessExpire: 30m
+  RefreshExpire: 2h
+  RememberRefreshExpire: 168h
+
+Captcha:
+  Mode: math
+  Length: 4
+  TTL: 5m
+
+EnhancedVerification:
+  # 可选：click-text、click-icon、rotate、behavior、image-select、slide
+  Mode: click-text
+  TTL: 2m
+
+Login:
+  MaxFailures: 5
+  FailureResetAfter: 24h
+
+Snowflake:
+  MachineID: 1
