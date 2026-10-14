@@ -31,9 +31,10 @@ router.beforeEach(async (to) => {
 
   const app = useAppStore(pinia)
   if (!app.routersLoaded) {
-    await app.loadRouters(router)
+    await Promise.all([app.loadRouters(router), app.loadDictionaries()])
     return to.fullPath
   }
+  if (!app.dictionariesLoaded) await app.loadDictionaries()
   return true
 })
 

@@ -17,6 +17,12 @@ const (
 	OrgCreateDebounceKey      = "org:create:debounce"
 	OrgUpdateDebounceKey      = "org:update:debounce"
 	OrgDeleteDebounceKey      = "org:delete:debounce"
+	DictTypeCreateDebounceKey = "dict:type:create:debounce"
+	DictTypeUpdateDebounceKey = "dict:type:update:debounce"
+	DictTypeDeleteDebounceKey = "dict:type:delete:debounce"
+	DictDataCreateDebounceKey = "dict:data:create:debounce"
+	DictDataUpdateDebounceKey = "dict:data:update:debounce"
+	DictDataDeleteDebounceKey = "dict:data:delete:debounce"
 )
 
 const CommonDebounceTTL = 3 * time.Second

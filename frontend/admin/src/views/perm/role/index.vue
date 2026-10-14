@@ -103,6 +103,7 @@ import {
 } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
 import StatusPulse from '@/components/StatusPulse.vue'
+import { useDictionaryOptions } from '@/hooks/useDictionary'
 import { deleteRole, getRoleList } from '@/api/role'
 import { useAdminStore } from '@/store'
 import RoleForm from './components/form.vue'
@@ -116,10 +117,7 @@ const columns = [
   { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 180 },
   { title: '操作', key: 'action', width: 340 },
 ]
-const statusOptions = [
-  { label: '启用', value: 1 },
-  { label: '禁用', value: 2 },
-]
+const statusOptions = useDictionaryOptions('sys_status', true)
 const query = reactive({ name: '', code: '', status: undefined })
 const admin = useAdminStore()
 const rows = ref([])

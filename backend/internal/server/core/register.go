@@ -14,4 +14,5 @@ func Register(r *gin.Engine, svcCtx *svc.ServiceContext) {
 	coreRouter.RegisterMenu(r, handler.NewMenuHandler(svcCtx), permissionChecker.CheckPermission)
 	coreRouter.RegisterOrg(r, handler.NewOrgHandler(svcCtx), permissionChecker.CheckPermission)
 	coreRouter.RegisterRole(r, handler.NewRoleHandler(svcCtx), permissionChecker.CheckPermission)
+	coreRouter.RegisterDict(r, handler.NewDictHandler(svcCtx), permissionChecker.CheckPermission)
 }

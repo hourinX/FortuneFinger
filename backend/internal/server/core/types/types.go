@@ -8,6 +8,134 @@ type IDPath struct {
 
 //endregion
 
+//region 字典管理出入参
+
+// 获取字典类型列表
+type GetDictTypeListReq struct {
+	Page     int    `form:"page" binding:"omitempty,min=1"`
+	PageSize int    `form:"pageSize" binding:"omitempty,min=1,max=100"`
+	Name     string `form:"name" binding:"max=100"`
+	Code     string `form:"code" binding:"max=100"`
+	Status   uint8  `form:"status" binding:"omitempty,oneof=1 2"`
+}
+
+type GetDictTypeListResp struct {
+	List  []DictTypeListItem `json:"list"`
+	Total int64              `json:"total"`
+}
+
+type DictTypeListItem struct {
+	ID       uint64 `json:"id,string"`
+	Name     string `json:"name"`
+	Code     string `json:"code"`
+	IsSystem uint8  `json:"is_system"`
+	Status   uint8  `json:"status"`
+}
+
+// 获取字典类型详情
+type GetDictTypeDetailResp struct {
+	ID       uint64 `json:"id,string"`
+	Name     string `json:"name"`
+	Code     string `json:"code"`
+	IsSystem uint8  `json:"is_system"`
+	Status   uint8  `json:"status"`
+	Remark   string `json:"remark"`
+}
+
+// 字典类型新增和修改共用参数
+type DictTypeReq struct {
+	Name   string `json:"name" binding:"required,max=100"`
+	Status uint8  `json:"status" binding:"required,oneof=1 2"`
+	Remark string `json:"remark" binding:"max=255"`
+}
+
+type CreateDictTypeReq struct {
+	DictTypeReq
+	Code string `json:"code" binding:"required,max=100"`
+}
+
+type UpdateDictTypeReq struct {
+	DictTypeReq
+}
+
+// 获取字典数据列表
+type GetDictDataListReq struct {
+	Page     int    `form:"page" binding:"omitempty,min=1"`
+	PageSize int    `form:"pageSize" binding:"omitempty,min=1,max=100"`
+	DictCode string `form:"dict_code" binding:"required,max=100"`
+	Label    string `form:"label" binding:"max=100"`
+	Status   uint8  `form:"status" binding:"omitempty,oneof=1 2"`
+}
+
+type GetDictDataListResp struct {
+	List  []DictDataListItem `json:"list"`
+	Total int64              `json:"total"`
+}
+
+type DictDataListItem struct {
+	ID        uint64 `json:"id,string"`
+	DictCode  string `json:"dict_code"`
+	Label     string `json:"label"`
+	Value     string `json:"value"`
+	Color     string `json:"color"`
+	IsDefault uint8  `json:"is_default"`
+	Sort      uint   `json:"sort"`
+	Status    uint8  `json:"status"`
+	Remark    string `json:"remark"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// 获取字典数据详情
+type GetDictDataDetailResp struct {
+	ID        uint64 `json:"id,string"`
+	DictCode  string `json:"dict_code"`
+	Label     string `json:"label"`
+	Value     string `json:"value"`
+	Color     string `json:"color"`
+	IsDefault uint8  `json:"is_default"`
+	Sort      uint   `json:"sort"`
+	Status    uint8  `json:"status"`
+	Remark    string `json:"remark"`
+}
+
+// 字典数据新增和修改共用参数
+type DictDataReq struct {
+	Label     string `json:"label" binding:"required,max=100"`
+	Value     string `json:"value" binding:"required,max=255"`
+	Color     string `json:"color" binding:"required,max=32"`
+	IsDefault uint8  `json:"is_default" binding:"required,oneof=1 2"`
+	Sort      uint   `json:"sort"`
+	Status    uint8  `json:"status" binding:"required,oneof=1 2"`
+	Remark    string `json:"remark" binding:"max=255"`
+}
+
+type CreateDictDataReq struct {
+	DictDataReq
+	DictCode string `json:"dict_code" binding:"required,max=100"`
+}
+
+type UpdateDictDataReq struct {
+	DictDataReq
+}
+
+// 批量获取字典选项
+type GetDictOptionsReq struct {
+	Codes string `form:"codes" binding:"max=2000"`
+}
+
+type GetDictOptionsResp map[string][]DictOption
+
+type DictOption struct {
+	Label     string `json:"label"`
+	Value     string `json:"value"`
+	Color     string `json:"color"`
+	IsDefault uint8  `json:"is_default"`
+	Sort      uint   `json:"sort"`
+}
+
+//endregion
+
 //region 组织管理出入参
 
 // 获取组织列表

@@ -114,6 +114,7 @@ import {
 } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
 import StatusPulse from '@/components/StatusPulse.vue'
+import { useDictionaryOptions } from '@/hooks/useDictionary'
 import { getOrgOptions } from '@/api/org'
 import { deleteUser, getUserList } from '@/api/user'
 import { useAdminStore } from '@/store'
@@ -130,10 +131,7 @@ const columns = [
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
   { title: '操作', key: 'action', width: 280 },
 ]
-const statusOptions = [
-  { label: '启用', value: 1 },
-  { label: '禁用', value: 2 },
-]
+const statusOptions = useDictionaryOptions('sys_status', true)
 const query = reactive({ username: '', nickname: '', status: undefined })
 const admin = useAdminStore()
 const orgKeyword = ref('')

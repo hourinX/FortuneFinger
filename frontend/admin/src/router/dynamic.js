@@ -1,4 +1,4 @@
-const viewModules = import.meta.glob(['../views/**/*.vue', '!../views/system/dict/index.vue'])
+const viewModules = import.meta.glob('../views/**/*.vue')
 const placeholderView = viewModules['../views/placeholder/index.vue']()
 const registeredRoutes = new Map()
 

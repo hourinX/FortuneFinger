@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { getDictOptions } from '@/api/dict'
 import { getRouters } from '@/api/menu'
 import { registerRouters, resetDynamicRoutes } from '@/router/dynamic'
 
@@ -6,12 +7,15 @@ export const useAppStore = defineStore('app', {
   state: () => ({
     collapsed: false,
     permissions: [],
+    dictionaries: {},
     routers: [],
     visitedRouters: [],
     routersLoaded: false,
+    dictionariesLoaded: false,
   }),
   getters: {
     hasPermission: (state) => (code) => state.permissions.includes(code),
+    dictOptions: (state) => (code) => state.dictionaries[code] || [],
   },
   actions: {
     toggleCollapsed() {
@@ -38,12 +42,19 @@ export const useAppStore = defineStore('app', {
       this.routers = routers
       this.routersLoaded = true
     },
+    async loadDictionaries(force = false) {
+      if (this.dictionariesLoaded && !force) return
+      this.dictionaries = (await getDictOptions()) || {}
+      this.dictionariesLoaded = true
+    },
     resetRouters() {
       resetDynamicRoutes()
       this.routers = []
       this.visitedRouters = []
       this.permissions = []
+      this.dictionaries = {}
       this.routersLoaded = false
+      this.dictionariesLoaded = false
     },
   },
 })

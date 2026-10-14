@@ -82,9 +82,9 @@
           </div>
         </template>
         <template v-else-if="column.key === 'types'">
-          <span class="type-label" :class="`type-label--${record.types}`">
-            {{ typeMeta[record.types] }}
-          </span>
+          <a-tag class="node-type-tag" :style="nodeTypeTagStyle(record.types)">
+            {{ typeOptionMap.get(record.types)?.label || '-' }}
+          </a-tag>
         </template>
         <template v-else-if="column.key === 'route' || column.key === 'code'">
           <span class="path-text">{{ record[column.key] || '-' }}</span>
@@ -123,6 +123,7 @@ import {
 import { Modal, message } from 'ant-design-vue'
 import IconPicker from '@/components/IconPicker.vue'
 import StatusPulse from '@/components/StatusPulse.vue'
+import { useDictionaryOptions } from '@/hooks/useDictionary'
 import { deleteMenu, getMenuList } from '@/api/menu'
 import MenuForm from './components/form.vue'
 
@@ -155,16 +156,20 @@ const columns = computed(() =>
   ),
 )
 
-const typeOptions = [
-  { label: '目录', value: 1 },
-  { label: '菜单', value: 2 },
-  { label: '权限', value: 3 },
-]
-const statusOptions = [
-  { label: '启用', value: 1 },
-  { label: '禁用', value: 2 },
-]
-const typeMeta = { 1: '目录', 2: '菜单', 3: '权限' }
+const typeOptions = useDictionaryOptions('node_types', true)
+const statusOptions = useDictionaryOptions('sys_status', true)
+const typeOptionMap = computed(() => new Map(typeOptions.value.map((item) => [item.value, item])))
+
+const nodeTypeColors = {
+  default: { color: '#555555', backgroundColor: '#f5f5f5', borderColor: '#e6e6e6' },
+  green: { color: '#246b45', backgroundColor: '#f1f8f4', borderColor: '#d5eadc' },
+  orange: { color: '#8a5a18', backgroundColor: '#fbf7ee', borderColor: '#eee1c8' },
+}
+
+function nodeTypeTagStyle(types) {
+  const color = typeOptionMap.value.get(types)?.color || 'default'
+  return nodeTypeColors[color] || { color, borderColor: color }
+}
 
 const query = reactive({ keyword: '', types: undefined, status: undefined })
 const rows = ref([])
@@ -469,30 +474,6 @@ onBeforeUnmount(stopResize)
 
 .expand-button--open :deep(.anticon) {
   transform: rotate(90deg);
-}
-
-.type-label {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 9px;
-  color: #555;
-  font-size: 12px;
-  background: #f5f5f5;
-  border: 1px solid #e6e6e6;
-  border-radius: 4px;
-}
-
-.type-label--2 {
-  color: #246b45;
-  background: #f1f8f4;
-  border-color: #d5eadc;
-}
-
-.type-label--3 {
-  color: #8a5a18;
-  background: #fbf7ee;
-  border-color: #eee1c8;
 }
 
 .path-text {

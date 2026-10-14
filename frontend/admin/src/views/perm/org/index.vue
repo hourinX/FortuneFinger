@@ -110,6 +110,7 @@ import {
 } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
 import StatusPulse from '@/components/StatusPulse.vue'
+import { useDictionaryOptions } from '@/hooks/useDictionary'
 import { deleteOrg, getOrgList } from '@/api/org'
 import OrgForm from './components/form.vue'
 
@@ -126,10 +127,7 @@ const typeOptions = [
   { label: '公司', value: 2 },
   { label: '部门', value: 3 },
 ]
-const statusOptions = [
-  { label: '启用', value: 1 },
-  { label: '禁用', value: 2 },
-]
+const statusOptions = useDictionaryOptions('sys_status', true)
 const query = reactive({ name: '', code: '', types: undefined, status: undefined })
 const activeQuery = reactive({ name: '', code: '', types: undefined, status: undefined })
 const rows = ref([])

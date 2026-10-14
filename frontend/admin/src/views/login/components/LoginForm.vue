@@ -46,7 +46,7 @@
   </a-form>
   <EnhancedVerification
     :open="verificationOpen"
-	scene="login"
+    scene="login"
     :subject="form.username"
     @close="verificationOpen = false"
     @verified="onVerificationPassed"
@@ -102,7 +102,7 @@ async function submit() {
   try {
     await admin.login({ ...form, remember: remember.value })
     try {
-      await app.loadRouters(router)
+      await Promise.all([app.loadRouters(router), app.loadDictionaries()])
     } catch (error) {
       await admin.logout()
       app.resetRouters()
@@ -112,12 +112,12 @@ async function submit() {
     else localStorage.removeItem('fortune_admin_username')
     await router.replace(String(route.query.redirect || '/dashboard'))
   } catch (error) {
-	if (Number(error.code) === 10) {
-		verificationOpen.value = true
-		return
-	}
+    if (Number(error.code) === 10) {
+      verificationOpen.value = true
+      return
+    }
     message.error(error.message || '登录失败')
-	form.verification_token = ''
+    form.verification_token = ''
     form.captcha = ''
     await loadCaptcha()
   } finally {
@@ -126,9 +126,9 @@ async function submit() {
 }
 
 async function onVerificationPassed(token) {
-	verificationOpen.value = false
-	form.verification_token = token
-	await submit()
+  verificationOpen.value = false
+  form.verification_token = token
+  await submit()
 }
 
 onMounted(loadCaptcha)

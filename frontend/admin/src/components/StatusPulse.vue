@@ -1,7 +1,7 @@
 <template>
   <span class="status-pulse" :class="`status-pulse--${status}`">
     <i />
-    <span>{{ label }}</span>
+    <span v-if="showText">{{ label }}</span>
   </span>
 </template>
 
@@ -12,6 +12,7 @@ const props = defineProps({
   status: { type: Number, required: true },
   activeText: { type: String, default: '启用' },
   inactiveText: { type: String, default: '禁用' },
+  showText: { type: Boolean, default: true },
 })
 
 const label = computed(() => (props.status === 1 ? props.activeText : props.inactiveText))
