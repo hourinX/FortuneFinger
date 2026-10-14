@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+*.exe
+*.test
+coverage.out
+logs/
+.gocache/
+backend/.gocache/
+backend/.gotmp/
+
+.vscode/
+.idea/
+
+docs/
+AGENTS.md
