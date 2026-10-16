@@ -58,3 +58,13 @@ Login:
 
 Snowflake:
   MachineID: 1
+
+Storage:
+  Driver: minio
+  Endpoint: 127.0.0.1:9000
+  Region: ""
+  AccessKey: F71CD1CA644A9C57071F
+  SecretKey: sk-ebb280c7b72ae3e20e08f1793b44990b1c7d4824
+  Bucket: fortunefinger
+  Prefix: "{scene}/{yyyyMMdd}/{file}"
+  Secure: false

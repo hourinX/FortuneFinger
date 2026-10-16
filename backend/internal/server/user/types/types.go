@@ -101,10 +101,20 @@ type GetUserInfoResp struct {
 	ID       uint64 `json:"id,string"`
 	Username string `json:"username"`
 	Nickname string `json:"nickname"`
+	AvatarID uint64 `json:"avatar_id,string"`
 	Avatar   string `json:"avatar"`
 	Email    string `json:"email"`
 	Mobile   string `json:"mobile"`
 	RoleCode string `json:"role_code"`
+}
+
+// 修改当前用户信息
+type UpdateUserInfoReq struct {
+	Nickname string `json:"nickname" binding:"required,max=64"`
+	AvatarID uint64 `json:"avatar_id,string"`
+	Email    string `json:"email" binding:"omitempty,email,max=254"`
+	Mobile   string `json:"mobile" binding:"max=32"`
+	Password string `json:"password" binding:"omitempty,min=6,max=64"`
 }
 
 //endregion
@@ -148,6 +158,7 @@ type GetUserDetailResp struct {
 	Username     string `json:"username"`
 	Nickname     string `json:"nickname"`
 	Avatar       string `json:"avatar"`
+	AvatarValue  string `json:"avatar_value"`
 	Email        string `json:"email"`
 	Mobile       string `json:"mobile"`
 	Status       uint8  `json:"status"`

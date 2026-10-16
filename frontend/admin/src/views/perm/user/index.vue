@@ -56,31 +56,52 @@
         :loading="loading"
         :pagination="pagination"
         row-key="id"
-        :scroll="{ x: 1060 }"
+        :scroll="{ x: 1200 }"
         @change="changePage"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'user'">
             <div class="user-info">
-              <a-avatar :src="record.avatar">{{ record.nickname.slice(0, 1) }}</a-avatar>
-              <div>
+              <button
+                class="avatar-preview-trigger"
+                type="button"
+                :disabled="!record.avatar"
+                :aria-label="record.avatar ? `预览${record.nickname}的头像` : undefined"
+                @click="openAvatarPreview(record)"
+              >
+                <a-avatar :size="38" :src="record.avatar">
+                  {{ record.nickname.slice(0, 1) }}
+                </a-avatar>
+              </button>
+              <div class="user-info__identity">
                 <strong>{{ record.nickname }}</strong>
-                <span>{{ record.username }}</span>
+                <span>@{{ record.username }}</span>
               </div>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'contact'">
+            <div class="contact-info">
+              <span><mail-outlined />{{ record.email || '未填写邮箱' }}</span>
+              <span><phone-outlined />{{ record.mobile || '未填写手机号' }}</span>
             </div>
           </template>
           <template v-else-if="column.key === 'status'">
             <StatusPulse :status="record.status" />
           </template>
-          <template v-else-if="column.key === 'role'">
-            <a-tag v-if="record.role_name" color="blue">{{ record.role_name }}</a-tag>
-            <a-tag v-else-if="record.role_code" color="default">角色已禁用/删除</a-tag>
-            <span v-else class="empty-role">未分配</span>
-          </template>
           <template v-else-if="column.key === 'department'">
-            <span v-if="record.department_name">{{ record.department_name }}</span>
+            <span v-if="record.department_name" class="department-name">
+              <apartment-outlined />{{ record.department_name }}
+            </span>
             <span v-else-if="record.role_code === 'super_admin'" class="empty-role">无需分配</span>
             <span v-else class="empty-role">未分配</span>
+          </template>
+          <template v-else-if="column.key === 'role'">
+            <a-tag v-if="record.role_name" color="blue">{{ record.role_name }}</a-tag>
+            <a-tag v-else-if="record.role_code">角色已禁用/删除</a-tag>
+            <span v-else class="empty-role">未分配</span>
+          </template>
+          <template v-else-if="column.key === 'createdAt'">
+            <span class="created-time">{{ record.created_at }}</span>
           </template>
           <template v-else-if="column.key === 'action'">
             <a-space :size="14">
@@ -95,24 +116,34 @@
             </a-space>
           </template>
         </template>
+        <template #emptyText><a-empty description="暂无用户数据" /></template>
       </a-table>
     </main>
   </section>
 
   <UserForm ref="formRef" :organizations="orgOptions" @success="loadUsers" />
   <AssignRole ref="assignRoleRef" @success="loadUsers" />
+  <ImagePreview
+    v-model:visible="avatarPreviewVisible"
+    :src="avatarPreviewSrc"
+    :alt="avatarPreviewAlt"
+  />
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  ApartmentOutlined,
   DeleteOutlined,
   EditOutlined,
+  MailOutlined,
+  PhoneOutlined,
   PlusOutlined,
   SafetyOutlined,
   SearchOutlined,
 } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
+import ImagePreview from '@/components/ImagePreview.vue'
 import StatusPulse from '@/components/StatusPulse.vue'
 import { useDictionaryOptions } from '@/hooks/useDictionary'
 import { getOrgOptions } from '@/api/org'
@@ -122,14 +153,13 @@ import UserForm from './components/form.vue'
 import AssignRole from './components/assign-role.vue'
 
 const columns = [
-  { title: '用户', key: 'user', width: 210 },
-  { title: '电子邮箱', dataIndex: 'email', key: 'email' },
-  { title: '手机号码', dataIndex: 'mobile', key: 'mobile', width: 150 },
-  { title: '所属角色', key: 'role', width: 130 },
+  { title: '用户信息', key: 'user', width: 200 },
+  { title: '联系方式', key: 'contact', width: 230 },
   { title: '所属部门', key: 'department', width: 150 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 110 },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
-  { title: '操作', key: 'action', width: 280 },
+  { title: '所属角色', key: 'role', width: 130 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
+  { title: '创建时间', key: 'createdAt', width: 170 },
+  { title: '操作', key: 'action', width: 260 },
 ]
 const statusOptions = useDictionaryOptions('sys_status', true)
 const query = reactive({ username: '', nickname: '', status: undefined })
@@ -149,6 +179,9 @@ const orgTreeData = computed(() => [
 const page = reactive({ current: 1, pageSize: 10 })
 const formRef = ref()
 const assignRoleRef = ref()
+const avatarPreviewVisible = ref(false)
+const avatarPreviewSrc = ref('')
+const avatarPreviewAlt = ref('')
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
@@ -190,6 +223,13 @@ function selectOrganization(keys) {
 
 function canOperate(record) {
   return record.role_code !== 'super_admin' || admin.profile?.role_code === 'super_admin'
+}
+
+function openAvatarPreview(record) {
+  if (!record.avatar) return
+  avatarPreviewSrc.value = record.avatar
+  avatarPreviewAlt.value = `${record.nickname}的头像`
+  avatarPreviewVisible.value = true
 }
 
 async function loadUsers() {
@@ -411,8 +451,8 @@ onMounted(() => {
   }
 
   :deep(.ant-table-tbody > tr > td) {
-    height: 58px;
-    padding: 9px 16px;
+    height: 68px;
+    padding: 10px 16px;
     color: #3b3b3b;
     border-bottom: 1px solid #f0f0f0;
   }
@@ -425,30 +465,111 @@ onMounted(() => {
 .user-layout-test__content .user-info {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
+  min-width: 0;
 
   :deep(.ant-avatar) {
+    flex: 0 0 auto;
     color: var(--color-primary);
     background: var(--color-primary-light);
+    box-shadow: 0 0 0 3px #fafafa;
   }
 
-  div {
+  .user-info__identity {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
   }
 
   strong {
-    color: #353535;
+    overflow: hidden;
+    color: #2f2f2f;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   span {
+    overflow: hidden;
     color: #929292;
     font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
+}
+
+.avatar-preview-trigger {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.contact-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.contact-info {
+  gap: 6px;
+
+  span {
+    display: flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 7px;
+    overflow: hidden;
+    color: #555;
+    font-size: 13px;
+    line-height: 17px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  :deep(.anticon) {
+    flex: 0 0 auto;
+    color: #a0a0a0;
+    font-size: 13px;
+  }
+}
+
+.department-name {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: #4a4a4a;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  :deep(.anticon) {
+    flex: 0 0 auto;
+    color: #8a94a3;
+  }
+}
+
+.user-layout-test__content :deep(.ant-tag) {
+  margin: 0;
+  line-height: 20px;
+}
+
+.created-time {
+  color: #6f6f6f;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .user-layout-test__content .action-link {

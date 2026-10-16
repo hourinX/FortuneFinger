@@ -101,17 +101,21 @@ async function submit() {
   loading.value = true
   try {
     await admin.login({ ...form, remember: remember.value })
+    await Promise.all([app.loadRouters(router), app.loadDictionaries()])
+    const navigationFailure = await router.replace(String(route.query.redirect || '/dashboard'))
+    if (navigationFailure) throw new Error('登录后页面跳转失败')
+
     try {
-      await Promise.all([app.loadRouters(router), app.loadDictionaries()])
-    } catch (error) {
+      if (remember.value) localStorage.setItem('fortune_admin_username', form.username)
+      else localStorage.removeItem('fortune_admin_username')
+    } catch {
+      // 浏览器禁用本地存储时不影响已经完成的登录。
+    }
+  } catch (error) {
+    if (admin.isLoggedIn) {
       await admin.logout()
       app.resetRouters()
-      throw error
     }
-    if (remember.value) localStorage.setItem('fortune_admin_username', form.username)
-    else localStorage.removeItem('fortune_admin_username')
-    await router.replace(String(route.query.redirect || '/dashboard'))
-  } catch (error) {
     if (Number(error.code) === 10) {
       verificationOpen.value = true
       return

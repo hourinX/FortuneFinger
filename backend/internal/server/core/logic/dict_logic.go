@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -60,6 +61,7 @@ func (l *dictLogic) GetDictTypeList(ctx context.Context, req *types.GetDictTypeL
 	if err != nil {
 		return nil, err
 	}
+
 	list := make([]types.DictTypeListItem, 0, len(dictTypes))
 	for _, dictType := range dictTypes {
 		list = append(list, types.DictTypeListItem{
@@ -70,6 +72,7 @@ func (l *dictLogic) GetDictTypeList(ctx context.Context, req *types.GetDictTypeL
 			Status:   dictType.Status,
 		})
 	}
+
 	resp := types.GetDictTypeListResp{
 		List:  list,
 		Total: total,
@@ -101,14 +104,17 @@ func (l *dictLogic) CreateDictType(ctx context.Context, req *types.CreateDictTyp
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.DictTypeCreateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.DictTypeCreateDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[DictLogic] Redis设置新增字典类型防抖失败", zap.Error(err))
+		l.svcCtx.Logger.Error("[DictLogic] Redis设置新增字典类型防抖失败", zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	existing, err := l.dictTypeRepo.FindByCode(ctx, req.Code)
 	if err != nil {
 		return err
@@ -116,6 +122,7 @@ func (l *dictLogic) CreateDictType(ctx context.Context, req *types.CreateDictTyp
 	if existing != nil {
 		return errorx.New(errorx.Conflict, "字典编码已存在")
 	}
+
 	dictType := &model.FortuneDictType{
 		Name:      req.Name,
 		Code:      req.Code,
@@ -137,7 +144,9 @@ func (l *dictLogic) UpdateDictType(ctx context.Context, id uint64, req *types.Up
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.DictTypeUpdateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.DictTypeUpdateDebounceKey + ":" + strconv.FormatUint(id, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
 		l.svcCtx.Logger.Error("[DictLogic] Redis设置修改字典类型防抖失败", zap.Uint64("dict_type_id", id), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
@@ -145,6 +154,7 @@ func (l *dictLogic) UpdateDictType(ctx context.Context, id uint64, req *types.Up
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	dictType, err := l.dictTypeRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -152,6 +162,7 @@ func (l *dictLogic) UpdateDictType(ctx context.Context, id uint64, req *types.Up
 	if dictType == nil {
 		return errorx.New(errorx.NotFound, "字典类型不存在")
 	}
+
 	updates := map[string]any{
 		"name":       req.Name,
 		"status":     req.Status,
@@ -170,14 +181,17 @@ func (l *dictLogic) DeleteDictType(ctx context.Context, id uint64) error {
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.DictTypeDeleteDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.DictTypeDeleteDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[DictLogic] Redis设置删除字典类型防抖失败", zap.Uint64("dict_type_id", id), zap.Error(err))
+		l.svcCtx.Logger.Error("[DictLogic] Redis设置删除字典类型防抖失败", zap.Uint64("dict_type_id", id), zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	dictType, err := l.dictTypeRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -188,6 +202,7 @@ func (l *dictLogic) DeleteDictType(ctx context.Context, id uint64) error {
 	if dictType.IsSystem == 1 {
 		return errorx.New(errorx.Forbidden, "系统字典不允许删除")
 	}
+
 	hasData, err := l.dictDataRepo.HasByCode(ctx, dictType.Code)
 	if err != nil {
 		return err
@@ -210,6 +225,7 @@ func (l *dictLogic) GetDictDataList(ctx context.Context, req *types.GetDictDataL
 	if dictType == nil {
 		return nil, errorx.New(errorx.NotFound, "字典类型不存在")
 	}
+
 	data, total, err := l.dictDataRepo.List(ctx, repository.DictDataListFilter{
 		Page:     req.Page,
 		PageSize: req.PageSize,
@@ -220,6 +236,7 @@ func (l *dictLogic) GetDictDataList(ctx context.Context, req *types.GetDictDataL
 	if err != nil {
 		return nil, err
 	}
+
 	list := make([]types.DictDataListItem, 0, len(data))
 	for _, item := range data {
 		list = append(list, types.DictDataListItem{
@@ -251,6 +268,7 @@ func (l *dictLogic) GetDictDataDetail(ctx context.Context, id uint64) (*types.Ge
 	if data == nil {
 		return nil, errorx.New(errorx.NotFound, "字典数据不存在")
 	}
+
 	resp := types.GetDictDataDetailResp{
 		ID:        data.ID,
 		DictCode:  data.DictCode,
@@ -270,17 +288,21 @@ func (l *dictLogic) CreateDictData(ctx context.Context, req *types.CreateDictDat
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.DictDataCreateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.DictDataCreateDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[DictLogic] Redis设置新增字典数据防抖失败", zap.Error(err))
+		l.svcCtx.Logger.Error("[DictLogic] Redis设置新增字典数据防抖失败", zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	if err := l.validateDictData(ctx, 0, req.DictCode, &req.DictDataReq); err != nil {
 		return err
 	}
+
 	data := &model.FortuneDictData{
 		DictCode:  req.DictCode,
 		Label:     req.Label,
@@ -299,6 +321,7 @@ func (l *dictLogic) CreateDictData(ctx context.Context, req *types.CreateDictDat
 		if createErr != nil {
 			return createErr
 		}
+
 		if req.IsDefault != 1 {
 			return nil
 		}
@@ -315,7 +338,9 @@ func (l *dictLogic) UpdateDictData(ctx context.Context, id uint64, req *types.Up
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.DictDataUpdateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.DictDataUpdateDebounceKey + ":" + strconv.FormatUint(id, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
 		l.svcCtx.Logger.Error("[DictLogic] Redis设置修改字典数据防抖失败", zap.Uint64("dict_data_id", id), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
@@ -323,6 +348,7 @@ func (l *dictLogic) UpdateDictData(ctx context.Context, id uint64, req *types.Up
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	data, err := l.dictDataRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -330,9 +356,11 @@ func (l *dictLogic) UpdateDictData(ctx context.Context, id uint64, req *types.Up
 	if data == nil {
 		return errorx.New(errorx.NotFound, "字典数据不存在")
 	}
+
 	if err := l.validateDictData(ctx, id, data.DictCode, &req.DictDataReq); err != nil {
 		return err
 	}
+
 	updates := map[string]any{
 		"label":      req.Label,
 		"value":      req.Value,
@@ -343,11 +371,13 @@ func (l *dictLogic) UpdateDictData(ctx context.Context, id uint64, req *types.Up
 		"remark":     req.Remark,
 		"updated_by": operatorID,
 	}
+
 	if err := l.svcCtx.GormDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		dictDataRepo := repository.NewDictDataRepository(tx)
 		if updateErr := dictDataRepo.Update(ctx, id, updates); updateErr != nil {
 			return updateErr
 		}
+
 		if req.IsDefault != 1 {
 			return nil
 		}
@@ -364,14 +394,17 @@ func (l *dictLogic) DeleteDictData(ctx context.Context, id uint64) error {
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.DictDataDeleteDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.DictDataDeleteDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[DictLogic] Redis设置删除字典数据防抖失败", zap.Uint64("dict_data_id", id), zap.Error(err))
+		l.svcCtx.Logger.Error("[DictLogic] Redis设置删除字典数据防抖失败", zap.Uint64("dict_data_id", id), zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	data, err := l.dictDataRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -379,6 +412,7 @@ func (l *dictLogic) DeleteDictData(ctx context.Context, id uint64) error {
 	if data == nil {
 		return errorx.New(errorx.NotFound, "字典数据不存在")
 	}
+
 	if err := l.dictDataRepo.Delete(ctx, id, uint64(time.Now().Unix()), operatorID); err != nil {
 		l.svcCtx.Logger.Error("[DictLogic] 删除字典数据失败", zap.Uint64("dict_data_id", id), zap.Error(err))
 		return err
@@ -390,6 +424,7 @@ func (l *dictLogic) GetDictOptions(ctx context.Context, req *types.GetDictOption
 	parts := strings.Split(req.Codes, ",")
 	codes := make([]string, 0, len(parts))
 	seen := make(map[string]struct{}, len(parts))
+
 	for _, part := range parts {
 		code := strings.TrimSpace(part)
 		if code == "" {
@@ -409,6 +444,7 @@ func (l *dictLogic) GetDictOptions(ctx context.Context, req *types.GetDictOption
 	for _, code := range codes {
 		resp[code] = []types.DictOption{}
 	}
+
 	var dictTypes []model.FortuneDictType
 	var err error
 	if len(codes) == 0 {
@@ -419,6 +455,7 @@ func (l *dictLogic) GetDictOptions(ctx context.Context, req *types.GetDictOption
 	if err != nil {
 		return nil, err
 	}
+
 	enabledCodes := make([]string, 0, len(dictTypes))
 	for _, dictType := range dictTypes {
 		enabledCodes = append(enabledCodes, dictType.Code)
@@ -427,6 +464,7 @@ func (l *dictLogic) GetDictOptions(ctx context.Context, req *types.GetDictOption
 	if err != nil {
 		return nil, err
 	}
+
 	for _, item := range data {
 		resp[item.DictCode] = append(resp[item.DictCode], types.DictOption{
 			Label:     item.Label,

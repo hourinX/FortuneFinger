@@ -25,6 +25,8 @@ type UserRepository interface {
 	List(ctx context.Context, filter UserListFilter) ([]model.FortuneUser, int64, error)
 	FindByID(ctx context.Context, id uint64) (*model.FortuneUser, error)
 	FindByUsername(ctx context.Context, username string) (*model.FortuneUser, error)
+	FindByEmail(ctx context.Context, email string) (*model.FortuneUser, error)
+	FindByMobile(ctx context.Context, mobile string) (*model.FortuneUser, error)
 	Create(ctx context.Context, user *model.FortuneUser) (uint64, error)
 	Update(ctx context.Context, id uint64, updates map[string]any) error
 	Delete(ctx context.Context, id, deletedAt, updatedBy uint64) error
@@ -88,6 +90,30 @@ func (r *userRepository) FindByUsername(ctx context.Context, username string) (*
 	}
 	if err != nil {
 		return nil, errorx.Wrap(errorx.DatabaseError, "查询用户失败", err)
+	}
+	return &user, nil
+}
+
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*model.FortuneUser, error) {
+	var user model.FortuneUser
+	err := r.db.WithContext(ctx).Where("email = ? AND deleted_at = ?", email, 0).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errorx.Wrap(errorx.DatabaseError, "查询用户邮箱失败", err)
+	}
+	return &user, nil
+}
+
+func (r *userRepository) FindByMobile(ctx context.Context, mobile string) (*model.FortuneUser, error) {
+	var user model.FortuneUser
+	err := r.db.WithContext(ctx).Where("mobile = ? AND deleted_at = ?", mobile, 0).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errorx.Wrap(errorx.DatabaseError, "查询用户手机号失败", err)
 	}
 	return &user, nil
 }

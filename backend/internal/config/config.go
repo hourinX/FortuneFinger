@@ -7,6 +7,7 @@ import (
 	"fortunefinger/backend/internal/pkg/gormc"
 	"fortunefinger/backend/internal/pkg/logger"
 	"fortunefinger/backend/internal/pkg/redisc"
+	"fortunefinger/backend/internal/pkg/storage"
 )
 
 type Config struct {
@@ -18,6 +19,7 @@ type Config struct {
 	EnhancedVerification EnhancedVerification `yaml:"EnhancedVerification" mapstructure:"EnhancedVerification"`
 	Login                Login                `yaml:"Login" mapstructure:"Login"`
 	Snowflake            Snowflake            `yaml:"Snowflake" mapstructure:"Snowflake"`
+	Storage              storage.Config       `yaml:"Storage" mapstructure:"Storage"`
 	Log                  logger.Config        `yaml:"Log" mapstructure:"Log"`
 }
 

@@ -30,3 +30,7 @@ export function assignUserRole(id, data) {
 export function getUserInfo() {
   return request.get(`${API_PREFIX}/getUserInfo`)
 }
+
+export function updateUserInfo(data) {
+  return request.put(`${API_PREFIX}/updateUserInfo`, data)
+}

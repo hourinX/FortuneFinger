@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"sort"
+	"strconv"
 	"time"
 
 	"fortunefinger/backend/internal/biz/operator"
@@ -23,7 +24,6 @@ type OrgLogic interface {
 	CreateOrg(ctx context.Context, req *types.CreateOrgReq) error
 	UpdateOrg(ctx context.Context, id uint64, req *types.UpdateOrgReq) error
 	DeleteOrg(ctx context.Context, id uint64) error
-
 	GetOrgOptions(ctx context.Context) (*types.GetOrgOptionsResp, error)
 }
 
@@ -56,6 +56,7 @@ func (l *orgLogic) GetOrgList(ctx context.Context, req *types.GetOrgListReq) (*t
 	for _, org := range orgs {
 		orgIDs[org.ID] = struct{}{}
 	}
+
 	collectParentIDs := func(items []model.FortuneOrg) []uint64 {
 		parentIDs := make([]uint64, 0)
 		seen := make(map[uint64]struct{})
@@ -100,6 +101,7 @@ func (l *orgLogic) GetOrgList(ctx context.Context, req *types.GetOrgListReq) (*t
 		}
 		return orgs[i].ID < orgs[j].ID
 	})
+
 	childrenByParentID := make(map[uint64][]model.FortuneOrg)
 	for _, org := range orgs {
 		childrenByParentID[org.ParentID] = append(childrenByParentID[org.ParentID], org)
@@ -145,6 +147,7 @@ func (l *orgLogic) GetOrgDetail(ctx context.Context, id uint64) (*types.GetOrgDe
 	if org == nil {
 		return nil, errorx.New(errorx.NotFound, "组织不存在")
 	}
+
 	resp := types.GetOrgDetailResp{
 		ID:       org.ID,
 		ParentID: org.ParentID,
@@ -163,17 +166,21 @@ func (l *orgLogic) CreateOrg(ctx context.Context, req *types.CreateOrgReq) error
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.OrgCreateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.OrgCreateDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[OrgLogic] Redis设置新增组织防抖失败", zap.Error(err))
+		l.svcCtx.Logger.Error("[OrgLogic] Redis设置新增组织防抖失败", zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	if err := l.validateOrg(ctx, 0, &req.OrgReq); err != nil {
 		return err
 	}
+
 	org := &model.FortuneOrg{
 		ParentID:  req.ParentID,
 		Name:      req.Name,
@@ -197,7 +204,9 @@ func (l *orgLogic) UpdateOrg(ctx context.Context, id uint64, req *types.UpdateOr
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.OrgUpdateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.OrgUpdateDebounceKey + ":" + strconv.FormatUint(id, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
 		l.svcCtx.Logger.Error("[OrgLogic] Redis设置修改组织防抖失败", zap.Uint64("org_id", id), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
@@ -205,6 +214,7 @@ func (l *orgLogic) UpdateOrg(ctx context.Context, id uint64, req *types.UpdateOr
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	org, err := l.orgRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -212,9 +222,11 @@ func (l *orgLogic) UpdateOrg(ctx context.Context, id uint64, req *types.UpdateOr
 	if org == nil {
 		return errorx.New(errorx.NotFound, "组织不存在")
 	}
+
 	if err := l.validateOrg(ctx, id, &req.OrgReq); err != nil {
 		return err
 	}
+
 	hasChildren, err := l.orgRepo.HasChildren(ctx, id)
 	if err != nil {
 		return err
@@ -222,6 +234,7 @@ func (l *orgLogic) UpdateOrg(ctx context.Context, id uint64, req *types.UpdateOr
 	if hasChildren && org.Types != req.Types {
 		return errorx.New(errorx.Conflict, "存在下级组织时不能修改组织类型")
 	}
+
 	updates := map[string]any{
 		"parent_id":  req.ParentID,
 		"name":       req.Name,
@@ -244,14 +257,17 @@ func (l *orgLogic) DeleteOrg(ctx context.Context, id uint64) error {
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.OrgDeleteDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.OrgDeleteDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[OrgLogic] Redis设置删除组织防抖失败", zap.Uint64("org_id", id), zap.Error(err))
+		l.svcCtx.Logger.Error("[OrgLogic] Redis设置删除组织防抖失败", zap.Uint64("org_id", id), zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	org, err := l.orgRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -259,6 +275,7 @@ func (l *orgLogic) DeleteOrg(ctx context.Context, id uint64) error {
 	if org == nil {
 		return errorx.New(errorx.NotFound, "组织不存在")
 	}
+
 	hasChildren, err := l.orgRepo.HasChildren(ctx, id)
 	if err != nil {
 		return err
@@ -266,6 +283,7 @@ func (l *orgLogic) DeleteOrg(ctx context.Context, id uint64) error {
 	if hasChildren {
 		return errorx.New(errorx.Conflict, "请先删除当前组织下的子组织")
 	}
+
 	hasBinding, err := l.orgUserRepo.HasOrgBinding(ctx, id)
 	if err != nil {
 		return err
@@ -273,6 +291,7 @@ func (l *orgLogic) DeleteOrg(ctx context.Context, id uint64) error {
 	if hasBinding {
 		return errorx.New(errorx.Conflict, "当前组织仍有关联用户，不能删除")
 	}
+
 	if err := l.orgRepo.Delete(ctx, id, uint64(time.Now().Unix()), operatorID); err != nil {
 		l.svcCtx.Logger.Error("[OrgLogic] 删除组织失败", zap.Uint64("org_id", id), zap.Error(err))
 		return err
@@ -285,10 +304,12 @@ func (l *orgLogic) GetOrgOptions(ctx context.Context) (*types.GetOrgOptionsResp,
 	if err != nil {
 		return nil, err
 	}
+
 	childrenByParentID := make(map[uint64][]model.FortuneOrg)
 	for _, org := range orgs {
 		childrenByParentID[org.ParentID] = append(childrenByParentID[org.ParentID], org)
 	}
+
 	var buildTree func(uint64) []types.OrgOption
 	buildTree = func(parentID uint64) []types.OrgOption {
 		children := childrenByParentID[parentID]

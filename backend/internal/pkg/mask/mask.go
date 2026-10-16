@@ -32,3 +32,23 @@ func Mobile(value string) string {
 	}
 	return string(chars[:3]) + strings.Repeat("*", length-7) + string(chars[length-4:])
 }
+
+// Email 隐藏邮箱名称中间部分，保留域名用于识别邮箱来源。
+func Email(value string) string {
+	separator := strings.LastIndex(value, "@")
+	if separator <= 0 {
+		return Name(value)
+	}
+	name := []rune(value[:separator])
+	domain := value[separator:]
+	switch len(name) {
+	case 0:
+		return "*" + domain
+	case 1:
+		return "*" + domain
+	case 2:
+		return string(name[:1]) + "*" + domain
+	default:
+		return string(name[:1]) + strings.Repeat("*", len(name)-2) + string(name[len(name)-1:]) + domain
+	}
+}

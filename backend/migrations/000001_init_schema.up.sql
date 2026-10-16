@@ -174,3 +174,27 @@ CREATE TABLE `fortune_org_user` (
   KEY `idx_fortune_org_user_department_deleted_user` (`department_id`, `deleted_at`, `user_id`),
   KEY `idx_fortune_org_user_company_type_deleted` (`company_id`, `relation_type`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='用户组织归属表';
+
+-- ---------- 对象存储记录表 ----------
+CREATE TABLE `fortune_storage` (
+  `id` bigint unsigned NOT NULL COMMENT '存储ID',
+  `provider` varchar(20) NOT NULL COMMENT '存储提供方：minio、oss',
+  `bucket` varchar(100) NOT NULL COMMENT '存储桶名称',
+  `path` varchar(512) NOT NULL COMMENT '对象存储路径，不包含存储桶名称',
+  `name` varchar(255) NOT NULL COMMENT '原始文件名',
+  `ext` varchar(20) NOT NULL DEFAULT '' COMMENT '文件扩展名，不包含点号',
+  `mime_type` varchar(100) NOT NULL COMMENT '文件MIME类型',
+  `size` bigint unsigned NOT NULL DEFAULT 0 COMMENT '文件大小，单位字节',
+  `hash` char(64) NOT NULL DEFAULT '' COMMENT '文件内容SHA-256摘要',
+  `scene` varchar(32) NOT NULL COMMENT '使用场景：avatar、prize、image、video、event',
+  `created_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建人',
+  `updated_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新人',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  `deleted_at` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除标识：非0已删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_fortune_storage_provider_bucket_path_deleted_at` (`provider`, `bucket`, `path`, `deleted_at`),
+  KEY `idx_fortune_storage_creator_deleted_created` (`created_by`, `deleted_at`, `created_at`),
+  KEY `idx_fortune_storage_scene_deleted_created` (`scene`, `deleted_at`, `created_at`),
+  KEY `idx_fortune_storage_deleted_created` (`deleted_at`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='对象存储记录表';

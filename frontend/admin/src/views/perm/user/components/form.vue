@@ -131,7 +131,7 @@ async function openEdit(id) {
     Object.assign(form, {
       username: record.username,
       nickname: record.nickname,
-      avatar: record.avatar,
+      avatar: record.avatar_value,
       status: record.status,
       email: record.email,
       mobile: record.mobile,

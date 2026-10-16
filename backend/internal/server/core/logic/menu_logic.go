@@ -26,7 +26,6 @@ type MenuLogic interface {
 	CreateMenu(ctx context.Context, req *types.CreateMenuReq) error
 	UpdateMenu(ctx context.Context, id uint64, req *types.UpdateMenuReq) error
 	DeleteMenu(ctx context.Context, id uint64) error
-
 	GetRouters(ctx context.Context) (*types.GetRoutersResp, error)
 	GetPermissionTree(ctx context.Context, roleID uint64) (*types.GetPermissionTreeResp, error)
 }
@@ -61,9 +60,11 @@ func (l *menuLogic) GetMenuList(ctx context.Context, req *types.GetMenuListReq) 
 	for _, menu := range menus {
 		menuIDs[menu.ID] = struct{}{}
 	}
+
 	collectParentIDs := func(items []model.FortuneMenu) []uint64 {
 		parentIDs := make([]uint64, 0)
 		seen := make(map[uint64]struct{})
+
 		for _, menu := range items {
 			if menu.PID == 0 {
 				continue
@@ -180,9 +181,10 @@ func (l *menuLogic) CreateMenu(ctx context.Context, req *types.CreateMenuReq) er
 		return err
 	}
 
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.MenuCreateDebounceKey, "", constant.CommonDebounceTTL)
+	debounceKey := constant.MenuCreateDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[MenuLogic] Redis设置新增菜单防抖失败", zap.Error(err))
+		l.svcCtx.Logger.Error("[MenuLogic] Redis设置新增菜单防抖失败", zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
@@ -205,6 +207,7 @@ func (l *menuLogic) CreateMenu(ctx context.Context, req *types.CreateMenuReq) er
 		CreatedBy: operatorID,
 		UpdatedBy: operatorID,
 	}
+
 	switch req.Types {
 	case 1:
 		menu.KeepAlive = 2
@@ -230,7 +233,8 @@ func (l *menuLogic) UpdateMenu(ctx context.Context, id uint64, req *types.Update
 		return err
 	}
 
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.MenuUpdateDebounceKey, "", constant.CommonDebounceTTL)
+	debounceKey := constant.MenuUpdateDebounceKey + ":" + strconv.FormatUint(id, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
 		l.svcCtx.Logger.Error("[MenuLogic] Redis设置修改菜单防抖失败", zap.Uint64("menu_id", id), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
@@ -253,6 +257,7 @@ func (l *menuLogic) UpdateMenu(ctx context.Context, id uint64, req *types.Update
 			req.Code = strings.ReplaceAll(req.Node, "/", ":") + ":view"
 		}
 	}
+
 	if err := l.validateMenu(ctx, id, &req.MenuReq); err != nil {
 		return err
 	}
@@ -278,6 +283,7 @@ func (l *menuLogic) UpdateMenu(ctx context.Context, id uint64, req *types.Update
 		"status":     req.Status,
 		"updated_by": operatorID,
 	}
+
 	switch req.Types {
 	case 1:
 		updates["keep_alive"] = uint8(2)
@@ -302,9 +308,10 @@ func (l *menuLogic) DeleteMenu(ctx context.Context, id uint64) error {
 		return err
 	}
 
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.MenuDeleteDebounceKey, "", constant.CommonDebounceTTL)
+	debounceKey := constant.MenuDeleteDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[MenuLogic] Redis设置删除菜单防抖失败", zap.Uint64("menu_id", id), zap.Error(err))
+		l.svcCtx.Logger.Error("[MenuLogic] Redis设置删除菜单防抖失败", zap.Uint64("menu_id", id), zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
@@ -318,6 +325,7 @@ func (l *menuLogic) DeleteMenu(ctx context.Context, id uint64) error {
 	if menu == nil {
 		return errorx.New(errorx.NotFound, "菜单不存在")
 	}
+
 	hasChildren, err := l.menuRepo.HasChildren(ctx, id)
 	if err != nil {
 		return err
@@ -325,6 +333,7 @@ func (l *menuLogic) DeleteMenu(ctx context.Context, id uint64) error {
 	if hasChildren {
 		return errorx.New(errorx.Conflict, "请先删除当前菜单下的子节点")
 	}
+
 	if err := l.menuRepo.Delete(ctx, id, uint64(time.Now().Unix()), operatorID); err != nil {
 		l.svcCtx.Logger.Error("[MenuLogic] 删除菜单失败", zap.Uint64("menu_id", id), zap.Error(err))
 		return err
@@ -337,10 +346,12 @@ func (l *menuLogic) GetRouters(ctx context.Context) (*types.GetRoutersResp, erro
 	if err != nil {
 		return nil, err
 	}
+
 	roleCode, err := l.permRepo.FindRoleCodeByUserID(ctx, strconv.FormatUint(userID, 10))
 	if err != nil {
 		return nil, err
 	}
+
 	menuIDs := make([]string, 0)
 	if roleCode != "" {
 		menuIDs, err = l.permRepo.ListMenuIDsByRoleCode(ctx, roleCode)
@@ -348,6 +359,7 @@ func (l *menuLogic) GetRouters(ctx context.Context) (*types.GetRoutersResp, erro
 			return nil, err
 		}
 	}
+
 	menus, err := l.menuRepo.ListEnabledRouterMenus(ctx)
 	if err != nil {
 		return nil, err
@@ -367,6 +379,7 @@ func (l *menuLogic) GetRouters(ctx context.Context) (*types.GetRoutersResp, erro
 	for _, menu := range menus {
 		menuMap[menu.ID] = menu
 	}
+
 	visibleMenuIDs := make(map[uint64]struct{})
 	for _, menu := range menus {
 		if hasAllMenuAccess {
@@ -379,6 +392,7 @@ func (l *menuLogic) GetRouters(ctx context.Context) (*types.GetRoutersResp, erro
 		if _, exists := authorizedMenuIDs[strconv.FormatUint(menu.ID, 10)]; !exists {
 			continue
 		}
+
 		visibleMenuIDs[menu.ID] = struct{}{}
 		parentID := menu.PID
 		for parentID != 0 {
@@ -397,6 +411,7 @@ func (l *menuLogic) GetRouters(ctx context.Context) (*types.GetRoutersResp, erro
 			menusByPID[menu.PID] = append(menusByPID[menu.PID], menu)
 		}
 	}
+
 	var buildRouterTree func(uint64) []types.RouterItem
 	buildRouterTree = func(pid uint64) []types.RouterItem {
 		childMenus := menusByPID[pid]
@@ -439,6 +454,7 @@ func (l *menuLogic) GetPermissionTree(ctx context.Context, roleID uint64) (*type
 			allPermissionIDs[strconv.FormatUint(menu.ID, 10)] = struct{}{}
 		}
 	}
+
 	allowedIDs := make(map[string]struct{})
 	if role.ParentID == 0 {
 		allowedIDs = allPermissionIDs
@@ -457,6 +473,7 @@ func (l *menuLogic) GetPermissionTree(ctx context.Context, roleID uint64) (*type
 			if listErr != nil {
 				return nil, listErr
 			}
+
 			for _, menuID := range parentMenuIDs {
 				if menuID == "*" {
 					allowedIDs = allPermissionIDs
@@ -477,11 +494,13 @@ func (l *menuLogic) GetPermissionTree(ctx context.Context, roleID uint64) (*type
 		if listErr != nil {
 			return nil, listErr
 		}
+
 		for _, menuID := range roleMenuIDs {
 			if menuID == "*" {
 				selectedIDs = allPermissionIDs
 				break
 			}
+
 			if _, exists := allowedIDs[menuID]; exists {
 				selectedIDs[menuID] = struct{}{}
 			}
@@ -492,6 +511,7 @@ func (l *menuLogic) GetPermissionTree(ctx context.Context, roleID uint64) (*type
 	for _, menu := range menus {
 		childrenByPID[menu.PID] = append(childrenByPID[menu.PID], menu)
 	}
+
 	var buildTree func(uint64) []types.PermissionTreeItem
 	buildTree = func(pid uint64) []types.PermissionTreeItem {
 		items := make([]types.PermissionTreeItem, 0)

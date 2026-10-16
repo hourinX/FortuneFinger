@@ -25,7 +25,6 @@ type RoleLogic interface {
 	CreateRole(ctx context.Context, req *types.CreateRoleReq) error
 	UpdateRole(ctx context.Context, id uint64, req *types.UpdateRoleReq) error
 	DeleteRole(ctx context.Context, id uint64) error
-
 	GetRoleOptions(ctx context.Context) (*types.GetRoleOptionsResp, error)
 	UpdateRolePermission(ctx context.Context, id uint64, req *types.UpdateRolePermissionReq) error
 }
@@ -62,6 +61,7 @@ func (l *roleLogic) GetRoleList(ctx context.Context, req *types.GetRoleListReq) 
 	for _, role := range roles {
 		roleIDs[role.ID] = struct{}{}
 	}
+
 	collectParentIDs := func(items []model.FortuneRole) []uint64 {
 		parentIDs := make([]uint64, 0)
 		seen := make(map[uint64]struct{})
@@ -108,6 +108,7 @@ func (l *roleLogic) GetRoleList(ctx context.Context, req *types.GetRoleListReq) 
 	for _, role := range roles {
 		childrenByParentID[role.ParentID] = append(childrenByParentID[role.ParentID], role)
 	}
+
 	var buildItem func(model.FortuneRole) types.RoleListItem
 	buildItem = func(role model.FortuneRole) types.RoleListItem {
 		item := types.RoleListItem{
@@ -162,17 +163,21 @@ func (l *roleLogic) CreateRole(ctx context.Context, req *types.CreateRoleReq) er
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.RoleCreateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.RoleCreateDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[RoleLogic] Redis设置新增角色防抖失败", zap.Error(err))
+		l.svcCtx.Logger.Error("[RoleLogic] Redis设置新增角色防抖失败", zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
 		return errorx.New(errorx.TooManyRequests, "操作过于频繁，请勿重复提交")
 	}
+
 	if err := l.validateRole(ctx, 0, &req.RoleReq); err != nil {
 		return err
 	}
+
 	if req.ParentID == 0 {
 		if req.Code != "super_admin" {
 			return errorx.New(errorx.InvalidParameter, "顶级角色编码必须为super_admin")
@@ -185,6 +190,7 @@ func (l *roleLogic) CreateRole(ctx context.Context, req *types.CreateRoleReq) er
 			return errorx.New(errorx.Conflict, "系统只允许存在一个顶级角色")
 		}
 	}
+
 	roleByCode, err := l.roleRepo.FindByCode(ctx, req.Code)
 	if err != nil {
 		return err
@@ -201,6 +207,7 @@ func (l *roleLogic) CreateRole(ctx context.Context, req *types.CreateRoleReq) er
 		CreatedBy: operatorID,
 		UpdatedBy: operatorID,
 	}
+
 	if _, err := l.roleRepo.Create(ctx, role); err != nil {
 		l.svcCtx.Logger.Error("[RoleLogic] 新增角色失败", zap.String("role_code", req.Code), zap.Error(err))
 		return err
@@ -213,7 +220,9 @@ func (l *roleLogic) UpdateRole(ctx context.Context, id uint64, req *types.Update
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.RoleUpdateDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.RoleUpdateDebounceKey + ":" + strconv.FormatUint(id, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
 		l.svcCtx.Logger.Error("[RoleLogic] Redis设置修改角色防抖失败", zap.Uint64("role_id", id), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
@@ -229,9 +238,11 @@ func (l *roleLogic) UpdateRole(ctx context.Context, id uint64, req *types.Update
 	if role == nil {
 		return errorx.New(errorx.NotFound, "角色不存在")
 	}
+
 	if err := l.access.EnsureCanOperateRole(ctx, operatorID, role.Code); err != nil {
 		return err
 	}
+
 	if role.ParentID == 0 {
 		if req.ParentID != 0 {
 			return errorx.New(errorx.Forbidden, "顶级角色不允许更改所属父级")
@@ -242,9 +253,11 @@ func (l *roleLogic) UpdateRole(ctx context.Context, id uint64, req *types.Update
 	} else if req.ParentID == 0 {
 		return errorx.New(errorx.Forbidden, "普通角色不允许设为顶级角色")
 	}
+
 	if err := l.validateRole(ctx, id, &req.RoleReq); err != nil {
 		return err
 	}
+
 	parentChanged := role.ParentID != req.ParentID
 	var subtreeRoleCodes []string
 	if parentChanged {
@@ -267,6 +280,7 @@ func (l *roleLogic) UpdateRole(ctx context.Context, id uint64, req *types.Update
 		"status":     req.Status,
 		"updated_by": operatorID,
 	}
+
 	if err := l.svcCtx.GormDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		roleRepo := repository.NewRoleRepository(tx, l.svcCtx.Snowflake)
 		if err := roleRepo.Update(ctx, id, updates); err != nil {
@@ -289,9 +303,11 @@ func (l *roleLogic) DeleteRole(ctx context.Context, id uint64) error {
 	if err != nil {
 		return err
 	}
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.RoleDeleteDebounceKey, "", constant.CommonDebounceTTL)
+
+	debounceKey := constant.RoleDeleteDebounceKey + ":" + strconv.FormatUint(operatorID, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
-		l.svcCtx.Logger.Error("[RoleLogic] Redis设置删除角色防抖失败", zap.Uint64("role_id", id), zap.Error(err))
+		l.svcCtx.Logger.Error("[RoleLogic] Redis设置删除角色防抖失败", zap.Uint64("role_id", id), zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
 	}
 	if !acquired {
@@ -305,12 +321,14 @@ func (l *roleLogic) DeleteRole(ctx context.Context, id uint64) error {
 	if role == nil {
 		return errorx.New(errorx.NotFound, "角色不存在")
 	}
+
 	if err := l.access.EnsureCanOperateRole(ctx, operatorID, role.Code); err != nil {
 		return err
 	}
 	if role.ParentID == 0 {
 		return errorx.New(errorx.Forbidden, "顶级角色不允许删除")
 	}
+
 	hasChildren, err := l.roleRepo.HasChildren(ctx, id)
 	if err != nil {
 		return err
@@ -318,6 +336,7 @@ func (l *roleLogic) DeleteRole(ctx context.Context, id uint64) error {
 	if hasChildren {
 		return errorx.New(errorx.Conflict, "请先删除当前角色下的子角色")
 	}
+
 	hasUsers, err := l.permRepo.HasUserBindingByRoleCode(ctx, role.Code)
 	if err != nil {
 		return err
@@ -350,6 +369,7 @@ func (l *roleLogic) GetRoleOptions(ctx context.Context) (*types.GetRoleOptionsRe
 	for _, role := range roles {
 		childrenByParentID[role.ParentID] = append(childrenByParentID[role.ParentID], role)
 	}
+
 	var buildOptions func(uint64) []types.RoleOption
 	buildOptions = func(parentID uint64) []types.RoleOption {
 		items := childrenByParentID[parentID]
@@ -371,7 +391,8 @@ func (l *roleLogic) GetRoleOptions(ctx context.Context) (*types.GetRoleOptionsRe
 }
 
 func (l *roleLogic) UpdateRolePermission(ctx context.Context, id uint64, req *types.UpdateRolePermissionReq) error {
-	acquired, err := l.svcCtx.Redis.SetNX(ctx, constant.RolePermissionDebounceKey, "", constant.CommonDebounceTTL)
+	debounceKey := constant.RolePermissionDebounceKey + ":" + strconv.FormatUint(id, 10)
+	acquired, err := l.svcCtx.Redis.SetNX(ctx, debounceKey, "", constant.CommonDebounceTTL)
 	if err != nil {
 		l.svcCtx.Logger.Error("[RoleLogic] Redis设置角色权限防抖失败", zap.Uint64("role_id", id), zap.Error(err))
 		return errorx.Wrap(errorx.ServiceUnavailable, "服务暂时不可用，请稍后重试", err)
@@ -390,6 +411,7 @@ func (l *roleLogic) UpdateRolePermission(ctx context.Context, id uint64, req *ty
 	if role.ParentID == 0 {
 		return errorx.New(errorx.Forbidden, "顶级角色的权限不允许修改")
 	}
+
 	parent, err := l.roleRepo.FindByID(ctx, role.ParentID)
 	if err != nil {
 		return err
@@ -402,12 +424,14 @@ func (l *roleLogic) UpdateRolePermission(ctx context.Context, id uint64, req *ty
 	if err != nil {
 		return err
 	}
+
 	validIDs := make(map[string]struct{}, len(menus))
 	for _, menu := range menus {
 		if menu.Types == 2 || menu.Types == 3 {
 			validIDs[strconv.FormatUint(menu.ID, 10)] = struct{}{}
 		}
 	}
+
 	allowedIDs := validIDs
 	if parent.ParentID != 0 {
 		allowedIDs = make(map[string]struct{})
@@ -415,6 +439,7 @@ func (l *roleLogic) UpdateRolePermission(ctx context.Context, id uint64, req *ty
 		if listErr != nil {
 			return listErr
 		}
+
 		for _, menuID := range parentMenuIDs {
 			if menuID == "*" {
 				allowedIDs = validIDs
@@ -433,6 +458,7 @@ func (l *roleLogic) UpdateRolePermission(ctx context.Context, id uint64, req *ty
 		}
 		wantedIDs[menuID] = struct{}{}
 	}
+
 	currentMenuIDs, err := l.permRepo.ListMenuIDsByRoleCode(ctx, role.Code)
 	if err != nil {
 		return err
@@ -448,12 +474,14 @@ func (l *roleLogic) UpdateRolePermission(ctx context.Context, id uint64, req *ty
 			createIDs = append(createIDs, menuID)
 		}
 	}
+
 	deleteIDs := make([]string, 0)
 	for menuID := range currentIDs {
 		if _, exists := wantedIDs[menuID]; !exists {
 			deleteIDs = append(deleteIDs, menuID)
 		}
 	}
+
 	if len(createIDs) == 0 && len(deleteIDs) == 0 {
 		return nil
 	}

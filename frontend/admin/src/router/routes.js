@@ -10,7 +10,14 @@ const routes = [
     name: 'Layout',
     component: () => import('@/layouts/index.vue'),
     redirect: '/dashboard',
-    children: [],
+    children: [
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/profile/index.vue'),
+        meta: { title: '个人信息' },
+      },
+    ],
   },
   {
     path: '/:pathMatch(.*)*',

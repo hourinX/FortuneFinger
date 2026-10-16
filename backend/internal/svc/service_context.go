@@ -11,6 +11,7 @@ import (
 	"fortunefinger/backend/internal/pkg/gormc"
 	"fortunefinger/backend/internal/pkg/redisc"
 	"fortunefinger/backend/internal/pkg/snowflake"
+	"fortunefinger/backend/internal/pkg/storage"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -22,6 +23,7 @@ type ServiceContext struct {
 	GormDB               *gorm.DB
 	DataSources          *gormc.Registry
 	Redis                *redisc.Client
+	Storage              storage.Client
 	Captcha              *captcha.Generator
 	Snowflake            *snowflake.Generator
 	JWT                  *auth.Manager
@@ -34,6 +36,7 @@ func NewServiceContext(
 	log *zap.Logger,
 	dataSources *gormc.Registry,
 	redisClient *redisc.Client,
+	storageClient storage.Client,
 	captchaGenerator *captcha.Generator,
 	snowflakeGenerator *snowflake.Generator,
 	jwtManager *auth.Manager,
@@ -48,6 +51,9 @@ func NewServiceContext(
 	}
 	if redisClient == nil {
 		return nil, errors.New("svc: Redis客户端不能为空")
+	}
+	if storageClient == nil {
+		return nil, errors.New("svc: 对象存储客户端不能为空")
 	}
 	if captchaGenerator == nil {
 		return nil, errors.New("svc: 验证码生成器不能为空")
@@ -76,6 +82,7 @@ func NewServiceContext(
 		GormDB:               mainDB,
 		DataSources:          dataSources,
 		Redis:                redisClient,
+		Storage:              storageClient,
 		Captcha:              captchaGenerator,
 		Snowflake:            snowflakeGenerator,
 		JWT:                  jwtManager,

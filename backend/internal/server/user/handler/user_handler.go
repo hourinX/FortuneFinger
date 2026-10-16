@@ -130,3 +130,17 @@ func (h *UserHandler) GetUserInfoHandler(c *gin.Context) {
 	}
 	httpx.Ok(c, httpx.QuerySuccess, resp)
 }
+
+func (h *UserHandler) UpdateUserInfoHandler(c *gin.Context) {
+	var req types.UpdateUserInfoReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, errorx.Wrap(errorx.InvalidParameter, "个人信息参数错误", err))
+		return
+	}
+
+	if err := h.logic.UpdateUserInfo(c.Request.Context(), &req); err != nil {
+		httpx.Error(c, err)
+		return
+	}
+	httpx.Ok(c, httpx.UpdateSuccess)
+}

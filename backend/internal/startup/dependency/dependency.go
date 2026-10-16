@@ -14,6 +14,7 @@ import (
 	"fortunefinger/backend/internal/pkg/logger"
 	"fortunefinger/backend/internal/pkg/redisc"
 	"fortunefinger/backend/internal/pkg/snowflake"
+	"fortunefinger/backend/internal/pkg/storage"
 	"fortunefinger/backend/internal/startup/datasource"
 	"fortunefinger/backend/internal/svc"
 
@@ -34,6 +35,11 @@ func Init(ctx context.Context, conf config.Config) (*svc.ServiceContext, error) 
 	redisClient, err := redisc.Init(ctx, conf.Redis)
 	if err != nil {
 		return nil, initializationError(log, dataSources, nil, "初始化Redis失败", err)
+	}
+
+	storageClient, err := storage.Init(ctx, conf.Storage)
+	if err != nil {
+		return nil, initializationError(log, dataSources, redisClient, "初始化对象存储失败", err)
 	}
 
 	captchaGenerator, err := captcha.New(conf.Captcha)
@@ -77,6 +83,7 @@ func Init(ctx context.Context, conf config.Config) (*svc.ServiceContext, error) 
 		log,
 		dataSources,
 		redisClient,
+		storageClient,
 		captchaGenerator,
 		snowflakeGenerator,
 		jwtManager,
