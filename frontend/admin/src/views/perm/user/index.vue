@@ -39,13 +39,19 @@
           />
         </a-form-item>
         <a-form-item>
-          <a-space :size="8">
+          <a-space v-permission="'perm:user:list'" :size="8">
             <a-button type="primary" html-type="submit">查询</a-button>
             <a-button @click="reset">重置</a-button>
           </a-space>
         </a-form-item>
         <a-form-item class="user-layout-test__create">
-          <a-button type="primary" @click="formRef?.openCreate()"> <plus-outlined />新增 </a-button>
+          <a-button
+            v-permission="'perm:user:add'"
+            type="primary"
+            @click="formRef?.openCreate()"
+          >
+            <plus-outlined />新增
+          </a-button>
         </a-form-item>
       </a-form>
 
@@ -106,11 +112,27 @@
           <template v-else-if="column.key === 'action'">
             <a-space :size="14">
               <template v-if="canOperate(record)">
-                <a class="action-link" @click="assignRole(record)"> <safety-outlined />分配角色 </a>
-                <a class="action-link" @click="formRef?.openEdit(record.id)">
+                <a
+                  v-permission="'perm:user:role'"
+                  class="action-link"
+                  @click="assignRole(record)"
+                >
+                  <safety-outlined />分配角色
+                </a>
+                <a
+                  v-permission="'perm:user:edit'"
+                  class="action-link"
+                  @click="formRef?.openEdit(record.id)"
+                >
                   <edit-outlined />编辑
                 </a>
-                <a class="danger-link" @click="removeUser(record)"> <delete-outlined />删除 </a>
+                <a
+                  v-permission="'perm:user:del'"
+                  class="danger-link"
+                  @click="removeUser(record)"
+                >
+                  <delete-outlined />删除
+                </a>
               </template>
               <span v-else class="empty-role">—</span>
             </a-space>

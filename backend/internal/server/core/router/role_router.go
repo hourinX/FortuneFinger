@@ -15,8 +15,7 @@ func RegisterRole(r *gin.Engine, h *handler.RoleHandler, check mw.Checker) {
 		role.POST("/create", mw.CheckPermission("perm:role:add", check), h.CreateRoleHandler)
 		role.PUT("/update/:id", mw.CheckPermission("perm:role:edit", check), h.UpdateRoleHandler)
 		role.DELETE("/:id", mw.CheckPermission("perm:role:del", check), h.DeleteRoleHandler)
-
 		role.GET("/options", h.GetRoleOptionsHandler)
-		role.PUT("/permission/:id", mw.CheckPermission("perm:role:edit", check), h.UpdateRolePermissionHandler)
+		role.PUT("/permission/:id", mw.CheckPermission("perm:role:allocation", check), h.UpdateRolePermissionHandler)
 	}
 }

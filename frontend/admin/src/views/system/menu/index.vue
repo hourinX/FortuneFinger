@@ -29,13 +29,15 @@
         />
       </a-form-item>
       <a-form-item>
-        <a-space :size="8">
+        <a-space v-permission="'system:menu:list'" :size="8">
           <a-button type="primary" html-type="submit">查询</a-button>
           <a-button @click="reset">重置</a-button>
         </a-space>
       </a-form-item>
       <a-form-item class="create-action">
-        <a-button type="primary" @click="createMenu"><plus-outlined />新增</a-button>
+        <a-button v-permission="'system:menu:add'" type="primary" @click="createMenu">
+          <plus-outlined />新增
+        </a-button>
       </a-form-item>
     </a-form>
 
@@ -98,11 +100,28 @@
         </template>
         <template v-else-if="column.key === 'action'">
           <a-space :size="14">
-            <a v-if="record.types !== 3" class="action-link" @click="createChild(record)">
+            <a
+              v-if="record.types !== 3"
+              v-permission="'system:menu:add'"
+              class="action-link"
+              @click="createChild(record)"
+            >
               <plus-outlined />添加
             </a>
-            <a class="action-link" @click="editMenu(record)"><edit-outlined />编辑</a>
-            <a class="danger-link" @click="removeMenu(record)"><delete-outlined />删除</a>
+            <a
+              v-permission="'system:menu:edit'"
+              class="action-link"
+              @click="editMenu(record)"
+            >
+              <edit-outlined />编辑
+            </a>
+            <a
+              v-permission="'system:menu:del'"
+              class="danger-link"
+              @click="removeMenu(record)"
+            >
+              <delete-outlined />删除
+            </a>
           </a-space>
         </template>
       </template>

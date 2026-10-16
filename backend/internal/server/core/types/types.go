@@ -300,6 +300,13 @@ type RouterItem struct {
 	Children  []RouterItem `json:"children,omitempty"`
 }
 
+// 获取当前用户权限码
+type GetPermissionReq struct{}
+
+type GetPermissionResp struct {
+	List []string `json:"list"`
+}
+
 // 获取角色权限菜单树
 type GetPermissionTreeResp struct {
 	List        []PermissionTreeItem `json:"list"`

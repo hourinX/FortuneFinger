@@ -27,6 +27,7 @@ type MenuLogic interface {
 	UpdateMenu(ctx context.Context, id uint64, req *types.UpdateMenuReq) error
 	DeleteMenu(ctx context.Context, id uint64) error
 	GetRouters(ctx context.Context) (*types.GetRoutersResp, error)
+	GetPermission(ctx context.Context) (*types.GetPermissionResp, error)
 	GetPermissionTree(ctx context.Context, roleID uint64) (*types.GetPermissionTreeResp, error)
 }
 
@@ -433,6 +434,50 @@ func (l *menuLogic) GetRouters(ctx context.Context) (*types.GetRoutersResp, erro
 
 	resp := types.GetRoutersResp{List: buildRouterTree(0)}
 	return &resp, nil
+}
+
+func (l *menuLogic) GetPermission(ctx context.Context) (*types.GetPermissionResp, error) {
+	userID, err := operator.UserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	roleCode, err := l.permRepo.FindRoleCodeByUserID(ctx, strconv.FormatUint(userID, 10))
+	if err != nil {
+		return nil, err
+	}
+	if roleCode == "" {
+		return &types.GetPermissionResp{List: []string{}}, nil
+	}
+	menuIDs, err := l.permRepo.ListMenuIDsByRoleCode(ctx, roleCode)
+	if err != nil {
+		return nil, err
+	}
+	hasAllPermission := false
+	authorizedMenuIDs := make(map[string]struct{}, len(menuIDs))
+	for _, menuID := range menuIDs {
+		if menuID == "*" {
+			hasAllPermission = true
+			break
+		}
+		authorizedMenuIDs[menuID] = struct{}{}
+	}
+	menus, err := l.menuRepo.List(ctx, repository.MenuListFilter{Types: 3, Status: 1})
+	if err != nil {
+		return nil, err
+	}
+	permissions := make([]string, 0, len(menus))
+	for _, menu := range menus {
+		if menu.Code == nil || *menu.Code == "" {
+			continue
+		}
+		if !hasAllPermission {
+			if _, exists := authorizedMenuIDs[strconv.FormatUint(menu.ID, 10)]; !exists {
+				continue
+			}
+		}
+		permissions = append(permissions, *menu.Code)
+	}
+	return &types.GetPermissionResp{List: permissions}, nil
 }
 
 func (l *menuLogic) GetPermissionTree(ctx context.Context, roleID uint64) (*types.GetPermissionTreeResp, error) {

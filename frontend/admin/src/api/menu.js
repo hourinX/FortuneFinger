@@ -27,6 +27,10 @@ export function getRouters() {
   return request.get(`${API_PREFIX}/getRouters`)
 }
 
+export function getPermission() {
+  return request.get(`${API_PREFIX}/getPermission`)
+}
+
 export function getPermissionTree(roleId) {
   return request.get(`${API_PREFIX}/permission/${encodeParam(roleId)}`)
 }

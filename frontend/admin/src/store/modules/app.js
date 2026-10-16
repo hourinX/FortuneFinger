@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getDictOptions } from '@/api/dict'
-import { getRouters } from '@/api/menu'
+import { getPermission, getRouters } from '@/api/menu'
 import { registerRouters, resetDynamicRoutes } from '@/router/dynamic'
 
 const VISITED_ROUTERS_KEY = 'fortunefinger-visited-routers'
@@ -58,8 +58,9 @@ export const useAppStore = defineStore('app', {
     },
     async loadRouters(router) {
       if (this.routersLoaded) return
-      const data = await getRouters()
-      const routers = Array.isArray(data?.list) ? data.list : []
+      const [routerData, permissionData] = await Promise.all([getRouters(), getPermission()])
+      const routers = Array.isArray(routerData?.list) ? routerData.list : []
+      this.permissions = Array.isArray(permissionData?.list) ? permissionData.list : []
       registerRouters(router, routers)
       this.routers = routers
       const menuIDs = new Set()

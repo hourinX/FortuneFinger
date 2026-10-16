@@ -28,13 +28,15 @@
         />
       </a-form-item>
       <a-form-item>
-        <a-space :size="8">
+        <a-space v-permission="'perm:role:list'" :size="8">
           <a-button type="primary" html-type="submit">查询</a-button>
           <a-button @click="reset">重置</a-button>
         </a-space>
       </a-form-item>
       <a-form-item class="create-action">
-        <a-button type="primary" @click="createRole"><plus-outlined />新增</a-button>
+        <a-button v-permission="'perm:role:add'" type="primary" @click="createRole">
+          <plus-outlined />新增
+        </a-button>
       </a-form-item>
     </a-form>
 
@@ -70,15 +72,39 @@
         </template>
         <template v-else-if="column.key === 'action'">
           <a-space :size="14">
-            <a class="action-link" @click="configurePermission(record)">
+            <a
+              v-permission="'perm:role:tree'"
+              class="action-link"
+              @click="configurePermission(record)"
+            >
               <safety-certificate-outlined />{{
-                record.code === 'super_admin' ? '权限预览' : '配置权限'
+                record.code === 'super_admin' || !app.hasPermission('perm:role:allocation')
+                  ? '权限预览'
+                  : '配置权限'
               }}
             </a>
-            <a class="action-link" @click="createChild(record)"><plus-outlined />添加</a>
+            <a
+              v-permission="'perm:role:add'"
+              class="action-link"
+              @click="createChild(record)"
+            >
+              <plus-outlined />添加
+            </a>
             <template v-if="canOperate(record)">
-              <a class="action-link" @click="editRole(record)"><edit-outlined />编辑</a>
-              <a class="danger-link" @click="removeRole(record)"><delete-outlined />删除</a>
+              <a
+                v-permission="'perm:role:edit'"
+                class="action-link"
+                @click="editRole(record)"
+              >
+                <edit-outlined />编辑
+              </a>
+              <a
+                v-permission="'perm:role:del'"
+                class="danger-link"
+                @click="removeRole(record)"
+              >
+                <delete-outlined />删除
+              </a>
             </template>
           </a-space>
         </template>
@@ -105,7 +131,7 @@ import { Modal, message } from 'ant-design-vue'
 import StatusPulse from '@/components/StatusPulse.vue'
 import { useDictionaryOptions } from '@/hooks/useDictionary'
 import { deleteRole, getRoleList } from '@/api/role'
-import { useAdminStore } from '@/store'
+import { useAdminStore, useAppStore } from '@/store'
 import RoleForm from './components/form.vue'
 import PermissionDrawer from './components/permission.vue'
 
@@ -120,6 +146,7 @@ const columns = [
 const statusOptions = useDictionaryOptions('sys_status', true)
 const query = reactive({ name: '', code: '', status: undefined })
 const admin = useAdminStore()
+const app = useAppStore()
 const rows = ref([])
 const loading = ref(false)
 const formRef = ref()
@@ -189,6 +216,10 @@ function canOperate(record) {
 }
 
 async function loadRoles() {
+  if (!app.hasPermission('perm:role:list')) {
+    rows.value = []
+    return
+  }
   loading.value = true
   try {
     const data = await getRoleList({

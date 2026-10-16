@@ -26,13 +26,19 @@
         />
       </a-form-item>
       <a-form-item>
-        <a-space :size="8">
+        <a-space v-permission="'perm:org:list'" :size="8">
           <a-button type="primary" html-type="submit">查询</a-button>
           <a-button @click="reset">重置</a-button>
         </a-space>
       </a-form-item>
       <a-form-item class="org-toolbar__create">
-        <a-button type="primary" @click="formRef?.openCreate()"><plus-outlined />新增</a-button>
+        <a-button
+          v-permission="'perm:org:add'"
+          type="primary"
+          @click="formRef?.openCreate()"
+        >
+          <plus-outlined />新增
+        </a-button>
       </a-form-item>
     </a-form>
 
@@ -81,11 +87,28 @@
         </template>
         <template v-else-if="column.key === 'action'">
           <a-space :size="14">
-            <a v-if="record.types !== 3" class="action-link" @click="formRef?.openCreate(record)">
+            <a
+              v-if="record.types !== 3"
+              v-permission="'perm:org:add'"
+              class="action-link"
+              @click="formRef?.openCreate(record)"
+            >
               <plus-outlined />添加
             </a>
-            <a class="action-link" @click="formRef?.openEdit(record)"><edit-outlined />编辑</a>
-            <a class="danger-link" @click="removeOrg(record)"><delete-outlined />删除</a>
+            <a
+              v-permission="'perm:org:edit'"
+              class="action-link"
+              @click="formRef?.openEdit(record)"
+            >
+              <edit-outlined />编辑
+            </a>
+            <a
+              v-permission="'perm:org:del'"
+              class="danger-link"
+              @click="removeOrg(record)"
+            >
+              <delete-outlined />删除
+            </a>
           </a-space>
         </template>
       </template>

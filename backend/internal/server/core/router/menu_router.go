@@ -16,6 +16,7 @@ func RegisterMenu(r *gin.Engine, h *handler.MenuHandler, check mw.Checker) {
 		menu.PUT("/update/:id", mw.CheckPermission("system:menu:edit", check), h.UpdateMenuHandler)
 		menu.DELETE("/:id", mw.CheckPermission("system:menu:del", check), h.DeleteMenuHandler)
 		menu.GET("/getRouters", h.GetRoutersHandler)
-		menu.GET("/permission/:id", h.GetPermissionTreeHandler)
+		menu.GET("/getPermission", h.GetPermissionHandler)
+		menu.GET("/permission/:id", mw.CheckPermission("perm:role:tree", check), h.GetPermissionTreeHandler)
 	}
 }

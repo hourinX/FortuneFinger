@@ -11,6 +11,7 @@
         </div>
         <a-space :size="8">
           <a-button
+            v-permission="'system:dict:list-type'"
             class="dict-type-panel__refresh"
             type="text"
             size="small"
@@ -20,7 +21,12 @@
           >
             <reload-outlined />
           </a-button>
-          <a-button type="primary" size="small" @click="typeFormRef?.openCreate()">
+          <a-button
+            v-permission="'system:dict:add-type'"
+            type="primary"
+            size="small"
+            @click="typeFormRef?.openCreate()"
+          >
             <plus-outlined />新增
           </a-button>
         </a-space>
@@ -59,14 +65,29 @@
               <code>{{ item.code }}</code>
             </span>
             <StatusPulse :status="item.status" :show-text="false" />
-            <a-dropdown :trigger="['click']" @click.stop>
+            <a-dropdown
+              v-if="
+                app.hasPermission('system:dict:edit-type') ||
+                app.hasPermission('system:dict:del-type')
+              "
+              :trigger="['click']"
+              @click.stop
+            >
               <a class="dict-type-item__more" @click.prevent><more-outlined /></a>
               <template #overlay>
                 <a-menu>
-                  <a-menu-item @click="typeFormRef?.openEdit(item.id)">
+                  <a-menu-item
+                    v-permission="'system:dict:edit-type'"
+                    @click="typeFormRef?.openEdit(item.id)"
+                  >
                     <edit-outlined />编辑
                   </a-menu-item>
-                  <a-menu-item danger :disabled="item.is_system === 1" @click="removeType(item)">
+                  <a-menu-item
+                    v-permission="'system:dict:del-type'"
+                    danger
+                    :disabled="item.is_system === 1"
+                    @click="removeType(item)"
+                  >
                     <delete-outlined />删除
                   </a-menu-item>
                 </a-menu>
@@ -106,6 +127,7 @@
           <code v-if="selectedType">{{ selectedType.code }}</code>
         </div>
         <a-button
+          v-permission="'system:dict:add-data'"
           type="primary"
           :disabled="!selectedType"
           @click="dataFormRef?.openCreate(selectedType)"
@@ -131,9 +153,23 @@
           :options="statusOptions"
           :disabled="!selectedType"
         />
-        <a-button type="primary" ghost :disabled="!selectedType" @click="searchData">筛选</a-button>
-        <a-button type="text" :disabled="!selectedType" @click="resetData">清除条件</a-button>
-        <span class="dict-value-toolbar__total">{{ dataTotal }} 个值</span>
+        <a-button
+          v-permission="'system:dict:list-data'"
+          type="primary"
+          ghost
+          :disabled="!selectedType"
+          @click="searchData"
+        >
+          筛选
+        </a-button>
+        <a-button
+          v-permission="'system:dict:list-data'"
+          type="text"
+          :disabled="!selectedType"
+          @click="resetData"
+        >
+          清除条件
+        </a-button>
       </div>
 
       <a-table
@@ -164,10 +200,19 @@
           </template>
           <template v-else-if="column.key === 'action'">
             <a-space :size="12">
-              <a @click="dataFormRef?.openEdit(selectedType, record.id, record)">
+              <a
+                v-permission="'system:dict:edit-data'"
+                @click="dataFormRef?.openEdit(selectedType, record.id, record)"
+              >
                 <edit-outlined />编辑
               </a>
-              <a class="danger-link" @click="removeData(record)"> <delete-outlined />删除 </a>
+              <a
+                v-permission="'system:dict:del-data'"
+                class="danger-link"
+                @click="removeData(record)"
+              >
+                <delete-outlined />删除
+              </a>
             </a-space>
           </template>
         </template>
@@ -657,12 +702,6 @@ onBeforeUnmount(stopResize)
     :deep(.ant-select) {
       width: 130px;
     }
-  }
-
-  .dict-value-toolbar__total {
-    margin-left: auto;
-    color: #a19a97;
-    font-size: 12px;
   }
 
   .dict-value-table {

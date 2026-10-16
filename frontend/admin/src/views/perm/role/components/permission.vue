@@ -59,7 +59,7 @@
                 :key="action.id"
                 :checked="checkedKeys.includes(action.id)"
                 :disabled="readonly"
-                @change="toggleAction(menu.id, action.id, $event.target.checked)"
+                @change="toggleAction(menu, action, $event.target.checked)"
                 >{{ action.name }}</a-checkbox
               >
               <span v-if="!menu.actions.length" class="empty-action">—</span>
@@ -85,14 +85,19 @@ import { computed, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { getPermissionTree } from '@/api/menu'
 import { updateRolePermission } from '@/api/role'
+import { useAppStore } from '@/store'
 
+const app = useAppStore()
 const visible = ref(false)
 const role = ref()
 const checkedKeys = ref([])
 const loading = ref(false)
 const submitting = ref(false)
 const permissionGroups = ref([])
-const readonly = computed(() => Number(role.value?.parent_id) === 0)
+const readonly = computed(
+  () =>
+    Number(role.value?.parent_id) === 0 || !app.hasPermission('perm:role:allocation'),
+)
 
 function menuCodes(menu) {
   return [menu.id, ...menu.actions.map((item) => item.id)]
@@ -117,13 +122,50 @@ function togglePermission(code, checked) {
   checkedKeys.value = [...next]
 }
 
-function toggleAction(menuId, actionId, checked) {
+function actionName(action) {
+  return action.code?.split(':').at(-1)
+}
+
+function findAction(menu, name) {
+  return menu.actions.find((action) => actionName(action) === name)
+}
+
+function relatedActionName(name, source, target) {
+  if (name === source) return target
+  if (name?.startsWith(`${source}-`)) return `${target}${name.slice(source.length)}`
+  return ''
+}
+
+function normalizeLinkedActions(selectedIds) {
+  const next = new Set(selectedIds)
+  permissionGroups.value.forEach((group) => {
+    group.menus.forEach((menu) => {
+      menu.actions.forEach((editAction) => {
+        const infoName = relatedActionName(actionName(editAction), 'edit', 'info')
+        const infoAction = infoName ? findAction(menu, infoName) : undefined
+        if (!infoAction || !next.has(editAction.id)) return
+        next.add(menu.id)
+        next.add(infoAction.id)
+      })
+    })
+  })
+  return [...next]
+}
+
+function toggleAction(menu, action, checked) {
   const next = new Set(checkedKeys.value)
+  const name = actionName(action)
+  const infoName = relatedActionName(name, 'edit', 'info')
+  const editName = relatedActionName(name, 'info', 'edit')
   if (checked) {
-    next.add(menuId)
-    next.add(actionId)
+    next.add(menu.id)
+    next.add(action.id)
+    const infoAction = infoName ? findAction(menu, infoName) : undefined
+    if (infoAction) next.add(infoAction.id)
   } else {
-    next.delete(actionId)
+    next.delete(action.id)
+    const editAction = editName ? findAction(menu, editName) : undefined
+    if (editAction) next.delete(editAction.id)
   }
   checkedKeys.value = [...next]
 }
@@ -181,7 +223,7 @@ async function open(record) {
     const resp = await getPermissionTree(record.id)
     if (role.value?.id !== record.id) return
     permissionGroups.value = buildPermissionGroups(resp.list)
-    checkedKeys.value = resp.selected_ids || []
+    checkedKeys.value = normalizeLinkedActions(resp.selected_ids || [])
   } catch (error) {
     message.error(error.message || '获取角色权限失败')
   } finally {
