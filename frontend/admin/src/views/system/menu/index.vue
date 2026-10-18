@@ -84,7 +84,10 @@
           </div>
         </template>
         <template v-else-if="column.key === 'types'">
-          <a-tag class="node-type-tag" :style="nodeTypeTagStyle(record.types)">
+          <span v-if="!typeOptionMap.get(record.types)?.color">
+            {{ typeOptionMap.get(record.types)?.label || '-' }}
+          </span>
+          <a-tag v-else class="node-type-tag" :style="nodeTypeTagStyle(record.types)">
             {{ typeOptionMap.get(record.types)?.label || '-' }}
           </a-tag>
         </template>
@@ -143,6 +146,7 @@ import { Modal, message } from 'ant-design-vue'
 import IconPicker from '@/components/IconPicker.vue'
 import StatusPulse from '@/components/StatusPulse.vue'
 import { useDictionaryOptions } from '@/hooks/useDictionary'
+import { dictionaryTagStyleByCode } from '@/utils/dictionary-tag'
 import { deleteMenu, getMenuList } from '@/api/menu'
 import MenuForm from './components/form.vue'
 
@@ -179,15 +183,8 @@ const typeOptions = useDictionaryOptions('node_types', true)
 const statusOptions = useDictionaryOptions('sys_status', true)
 const typeOptionMap = computed(() => new Map(typeOptions.value.map((item) => [item.value, item])))
 
-const nodeTypeColors = {
-  default: { color: '#555555', backgroundColor: '#f5f5f5', borderColor: '#e6e6e6' },
-  green: { color: '#246b45', backgroundColor: '#f1f8f4', borderColor: '#d5eadc' },
-  orange: { color: '#8a5a18', backgroundColor: '#fbf7ee', borderColor: '#eee1c8' },
-}
-
 function nodeTypeTagStyle(types) {
-  const color = typeOptionMap.value.get(types)?.color || 'default'
-  return nodeTypeColors[color] || { color, borderColor: color }
+  return dictionaryTagStyleByCode('node_types', typeOptionMap.value.get(types))
 }
 
 const query = reactive({ keyword: '', types: undefined, status: undefined })

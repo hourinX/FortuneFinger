@@ -198,3 +198,42 @@ CREATE TABLE `fortune_storage` (
   KEY `idx_fortune_storage_scene_deleted_created` (`scene`, `deleted_at`, `created_at`),
   KEY `idx_fortune_storage_deleted_created` (`deleted_at`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='对象存储记录表';
+
+-- ---------- 奖品表 ----------
+CREATE TABLE `fortune_prize` (
+  `id` bigint unsigned NOT NULL COMMENT '奖品ID',
+  `name` varchar(100) NOT NULL COMMENT '奖品名称',
+  `storage_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '奖品图片存储ID',
+  `org_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '所属组织ID',
+  `level` varchar(100) NOT NULL DEFAULT 'participation' COMMENT '奖项等级',
+  `types` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '奖品类型',
+  `quantity` int unsigned NOT NULL DEFAULT 1 COMMENT '奖品数量',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '状态：1启用 2禁用',
+  `sort` int unsigned NOT NULL DEFAULT 0 COMMENT '排序',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '奖品说明',
+  `created_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建人',
+  `updated_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新人',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  `deleted_at` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除标识：非0已删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_fortune_prize_level_deleted_status` (`level`, `deleted_at`, `status`),
+  KEY `idx_fortune_prize_types_deleted_status` (`types`, `deleted_at`, `status`),
+  KEY `idx_fortune_prize_deleted_status_sort` (`deleted_at`, `status`, `sort`, `id`),
+  KEY `idx_fortune_prize_storage_deleted` (`storage_id`, `deleted_at`),
+  KEY `idx_fortune_prize_org_deleted_status_sort` (`org_id`, `deleted_at`, `status`, `sort`, `id`),
+  CONSTRAINT `chk_fortune_prize_quantity` CHECK (`quantity` >= 1)
+) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='奖品表';
+
+-- ---------- 系统设置表 ----------
+CREATE TABLE `fortune_sys_config` (
+  `id` bigint unsigned NOT NULL COMMENT '系统设置ID',
+  `code` varchar(100) NOT NULL COMMENT '设置编码',
+  `config` text NOT NULL COMMENT '设置内容',
+  `created_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建人',
+  `updated_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新人',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_fortune_sys_config_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='系统设置表';

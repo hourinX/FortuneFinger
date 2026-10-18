@@ -26,7 +26,8 @@
           placeholder="选择预设颜色或输入 #RRGGBB"
         >
           <template #option="option">
-            <a-tag :color="tagColor(option.value)">{{ option.label }}</a-tag>
+            <span v-if="!option.value">{{ option.label }}</span>
+            <a-tag v-else :color="tagColor(option.value)">{{ option.label }}</a-tag>
           </template>
         </a-auto-complete>
       </a-form-item>
@@ -79,6 +80,7 @@ const form = reactive({
   remark: '',
 })
 const colorOptions = [
+  { label: '无', value: '' },
   { label: '默认', value: 'default' },
   { label: '蓝色', value: 'blue' },
   { label: '绿色', value: 'green' },
@@ -90,7 +92,6 @@ const rules = {
   label: [{ required: true, whitespace: true, message: '请输入字典标签' }],
   value: [{ required: true, whitespace: true, message: '请输入字典值' }],
   color: [
-    { required: true, message: '请选择或输入展示颜色' },
     {
       pattern: /^(default|blue|green|orange|red|purple|#[0-9a-fA-F]{6})$/,
       message: '请输入有效的十六进制颜色码，例如 #E43D36',

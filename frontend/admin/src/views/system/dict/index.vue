@@ -183,7 +183,13 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'label'">
-            <a-tag :color="tagColor(record.color)">{{ record.label }}</a-tag>
+            <span v-if="!record.color">{{ record.label }}</span>
+            <a-tag v-else-if="selectedType?.code === 'sys_status'" :color="tagColor(record.color)">
+              {{ record.label }}
+            </a-tag>
+            <a-tag v-else :style="dictionaryTagStyleByCode(selectedType?.code, record)">
+              {{ record.label }}
+            </a-tag>
           </template>
           <template v-else-if="column.key === 'value'">
             <code>{{ record.value }}</code>
@@ -251,6 +257,7 @@ import { deleteDictData, deleteDictType, getDictDataList, getDictTypeList } from
 import StatusPulse from '@/components/StatusPulse.vue'
 import { useDictionaryOptions } from '@/hooks/useDictionary'
 import { useAppStore } from '@/store'
+import { dictionaryTagStyleByCode } from '@/utils/dictionary-tag'
 import DataForm from './components/data-form.vue'
 import TypeForm from './components/type-form.vue'
 

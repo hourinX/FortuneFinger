@@ -23,9 +23,16 @@ const (
 	DictDataCreateDebounceKey = "dict:data:create:debounce"
 	DictDataUpdateDebounceKey = "dict:data:update:debounce"
 	DictDataDeleteDebounceKey = "dict:data:delete:debounce"
+	PrizeCreateDebounceKey    = "prize:create:debounce"
+	PrizeUpdateDebounceKey    = "prize:update:debounce"
+	PrizeDeleteDebounceKey    = "prize:delete:debounce"
+	ConfigSaveDebounceKey     = "config:save:debounce"
+	ConfigTestMailDebounceKey = "config:test-mail:debounce"
 )
 
 const CommonDebounceTTL = 3 * time.Second
+
+const ConfigTestMailDebounceTTL = 5 * time.Second
 
 const (
 	CaptchaKeyPrefix      = "captcha:"

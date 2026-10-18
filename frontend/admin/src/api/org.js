@@ -26,3 +26,7 @@ export function deleteOrg(id) {
 export function getOrgOptions() {
   return request.get(`${API_PREFIX}/options`)
 }
+
+export function getOrgCompanies() {
+  return request.get(`${API_PREFIX}/companies`)
+}

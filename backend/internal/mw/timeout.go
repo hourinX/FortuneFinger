@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const requestTimeout = 5 * time.Second
+const requestTimeout = 10 * time.Second
 
 func Timeout(log *zap.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

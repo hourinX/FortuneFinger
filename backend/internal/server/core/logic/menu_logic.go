@@ -252,7 +252,7 @@ func (l *menuLogic) UpdateMenu(ctx context.Context, id uint64, req *types.Update
 		return errorx.New(errorx.NotFound, "菜单不存在")
 	}
 	if req.Types == 2 {
-		if menu.Types == 2 && menu.Code != nil {
+		if menu.Types == 2 && menu.Node == req.Node && menu.Code != nil {
 			req.Code = *menu.Code
 		} else {
 			req.Code = strings.ReplaceAll(req.Node, "/", ":") + ":view"

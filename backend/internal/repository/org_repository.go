@@ -23,6 +23,7 @@ type OrgRepository interface {
 	FindByIDs(ctx context.Context, ids []uint64) ([]model.FortuneOrg, error)
 	FindByID(ctx context.Context, id uint64) (*model.FortuneOrg, error)
 	ListByParentID(ctx context.Context, parentID uint64) ([]model.FortuneOrg, error)
+	ListCompanies(ctx context.Context) ([]model.FortuneOrg, error)
 	FindByParentAndName(ctx context.Context, parentID uint64, name string) (*model.FortuneOrg, error)
 	FindByParentAndCode(ctx context.Context, parentID uint64, code string) (*model.FortuneOrg, error)
 	HasChildren(ctx context.Context, id uint64) (bool, error)
@@ -88,6 +89,17 @@ func (r *orgRepository) ListByParentID(ctx context.Context, parentID uint64) ([]
 		Order("sort ASC, id ASC").
 		Find(&orgs).Error; err != nil {
 		return nil, errorx.Wrap(errorx.DatabaseError, "查询下级组织失败", err)
+	}
+	return orgs, nil
+}
+
+func (r *orgRepository) ListCompanies(ctx context.Context) ([]model.FortuneOrg, error) {
+	var orgs []model.FortuneOrg
+	if err := r.db.WithContext(ctx).
+		Where("parent_id <> ? AND types = ? AND status = ? AND deleted_at = ?", 0, 2, 1, 0).
+		Order("sort ASC, id ASC").
+		Find(&orgs).Error; err != nil {
+		return nil, errorx.Wrap(errorx.DatabaseError, "查询企业选项失败", err)
 	}
 	return orgs, nil
 }

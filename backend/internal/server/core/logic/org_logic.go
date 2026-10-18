@@ -25,6 +25,7 @@ type OrgLogic interface {
 	UpdateOrg(ctx context.Context, id uint64, req *types.UpdateOrgReq) error
 	DeleteOrg(ctx context.Context, id uint64) error
 	GetOrgOptions(ctx context.Context) (*types.GetOrgOptionsResp, error)
+	GetOrgCompanies(ctx context.Context) (*types.GetOrgCompaniesResp, error)
 }
 
 type orgLogic struct {
@@ -324,6 +325,23 @@ func (l *orgLogic) GetOrgOptions(ctx context.Context) (*types.GetOrgOptionsResp,
 		return options
 	}
 	resp := types.GetOrgOptionsResp{List: buildTree(0)}
+	return &resp, nil
+}
+
+func (l *orgLogic) GetOrgCompanies(ctx context.Context) (*types.GetOrgCompaniesResp, error) {
+	orgs, err := l.orgRepo.ListCompanies(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]types.OrgCompanyOption, 0, len(orgs))
+	for _, org := range orgs {
+		list = append(list, types.OrgCompanyOption{
+			ID:   org.ID,
+			Name: org.Name,
+		})
+	}
+	resp := types.GetOrgCompaniesResp{List: list}
 	return &resp, nil
 }
 

@@ -71,12 +71,25 @@ async function onClick({ key }) {
 
 <style scoped>
 .app-sider {
+  height: 100vh;
   background: #fff;
   border-right: 1px solid #edf0f4;
 }
-.app-sider :deep(.ant-layout-sider-children),
+.app-sider :deep(.ant-layout-sider-children) {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
 .app-sider :deep(.ant-menu-light) {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
   background: transparent;
+}
+.app-sider :deep(.ant-menu-light::-webkit-scrollbar) {
+  display: none;
 }
 .app-sider :deep(.ant-menu-light .ant-menu-sub) {
   background: #faf8f8;

@@ -4,6 +4,7 @@ import { getPermission, getRouters } from '@/api/menu'
 import { registerRouters, resetDynamicRoutes } from '@/router/dynamic'
 
 const VISITED_ROUTERS_KEY = 'fortunefinger-visited-routers'
+const VISITED_ROUTER_STATES_KEY = 'fortunefinger-visited-router-states'
 
 function restoreVisitedRouters() {
   try {
@@ -15,6 +16,15 @@ function restoreVisitedRouters() {
   }
 }
 
+function restoreVisitedRouterStates() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(VISITED_ROUTER_STATES_KEY) || '{}')
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  } catch {
+    return {}
+  }
+}
+
 export const useAppStore = defineStore('app', {
   state: () => ({
     collapsed: false,
@@ -22,6 +32,7 @@ export const useAppStore = defineStore('app', {
     dictionaries: {},
     routers: [],
     visitedRouters: restoreVisitedRouters(),
+    visitedRouterStates: restoreVisitedRouterStates(),
     routersLoaded: false,
     dictionariesLoaded: false,
   }),
@@ -51,10 +62,23 @@ export const useAppStore = defineStore('app', {
       const index = this.visitedRouters.findIndex((item) => item.id === id)
       if (index === -1) return
       this.visitedRouters.splice(index, 1)
+      delete this.visitedRouterStates[String(id)]
       this.persistVisitedRouters()
+      this.persistVisitedRouterStates()
     },
     persistVisitedRouters() {
       sessionStorage.setItem(VISITED_ROUTERS_KEY, JSON.stringify(this.visitedRouters))
+    },
+    getVisitedRouterState(id) {
+      return this.visitedRouterStates[String(id)] || null
+    },
+    setVisitedRouterState(id, state) {
+      if (!id) return
+      this.visitedRouterStates[String(id)] = state
+      this.persistVisitedRouterStates()
+    },
+    persistVisitedRouterStates() {
+      sessionStorage.setItem(VISITED_ROUTER_STATES_KEY, JSON.stringify(this.visitedRouterStates))
     },
     async loadRouters(router) {
       if (this.routersLoaded) return
@@ -72,7 +96,11 @@ export const useAppStore = defineStore('app', {
       }
       collectMenuIDs(routers)
       this.visitedRouters = this.visitedRouters.filter((item) => menuIDs.has(String(item.id)))
+      this.visitedRouterStates = Object.fromEntries(
+        Object.entries(this.visitedRouterStates).filter(([id]) => menuIDs.has(String(id))),
+      )
       this.persistVisitedRouters()
+      this.persistVisitedRouterStates()
       this.routersLoaded = true
     },
     async loadDictionaries(force = false) {
@@ -85,6 +113,8 @@ export const useAppStore = defineStore('app', {
       this.routers = []
       this.visitedRouters = []
       sessionStorage.removeItem(VISITED_ROUTERS_KEY)
+      this.visitedRouterStates = {}
+      sessionStorage.removeItem(VISITED_ROUTER_STATES_KEY)
       this.permissions = []
       this.dictionaries = {}
       this.routersLoaded = false

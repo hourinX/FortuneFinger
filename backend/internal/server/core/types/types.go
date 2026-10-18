@@ -1,9 +1,40 @@
 package types
 
+import "encoding/json"
+
 //region 公共类型
 
 type IDPath struct {
 	ID uint64 `uri:"id" binding:"required"`
+}
+
+//endregion
+
+//region 系统配置出入参
+
+type GetConfigReq struct {
+	Code string `form:"code" binding:"required,max=100"`
+}
+
+type GetConfigResp struct {
+	ID     uint64          `json:"id,string"`
+	Code   string          `json:"code"`
+	Config json.RawMessage `json:"config"`
+}
+
+type SaveConfigReq struct {
+	ID     uint64          `json:"id,string"`
+	Code   string          `json:"code" binding:"required,max=100"`
+	Config json.RawMessage `json:"config" binding:"required"`
+}
+
+type SaveConfigResp struct {
+	ID   uint64 `json:"id,string"`
+	Code string `json:"code"`
+}
+
+type SendTestMailReq struct {
+	Email string `json:"email" binding:"required,email,max=254"`
 }
 
 //endregion
@@ -103,7 +134,7 @@ type GetDictDataDetailResp struct {
 type DictDataReq struct {
 	Label     string `json:"label" binding:"required,max=100"`
 	Value     string `json:"value" binding:"required,max=255"`
-	Color     string `json:"color" binding:"required,max=32"`
+	Color     string `json:"color" binding:"max=32"`
 	IsDefault uint8  `json:"is_default" binding:"required,oneof=1 2"`
 	Sort      uint   `json:"sort"`
 	Status    uint8  `json:"status" binding:"required,oneof=1 2"`
@@ -206,6 +237,18 @@ type OrgOption struct {
 	ID       uint64      `json:"id,string"`
 	Name     string      `json:"name"`
 	Children []OrgOption `json:"children,omitempty"`
+}
+
+// 获取企业选项
+type GetOrgCompaniesReq struct{}
+
+type GetOrgCompaniesResp struct {
+	List []OrgCompanyOption `json:"list"`
+}
+
+type OrgCompanyOption struct {
+	ID   uint64 `json:"id,string"`
+	Name string `json:"name"`
 }
 
 //endregion

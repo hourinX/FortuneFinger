@@ -110,3 +110,18 @@ func (h *OrgHandler) GetOrgOptionsHandler(c *gin.Context) {
 	}
 	httpx.Ok(c, httpx.QuerySuccess, resp)
 }
+
+func (h *OrgHandler) GetOrgCompaniesHandler(c *gin.Context) {
+	var req types.GetOrgCompaniesReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		httpx.Error(c, errorx.Wrap(errorx.InvalidParameter, "企业选项参数错误", err))
+		return
+	}
+
+	resp, err := h.logic.GetOrgCompanies(c.Request.Context())
+	if err != nil {
+		httpx.Error(c, err)
+		return
+	}
+	httpx.Ok(c, httpx.QuerySuccess, resp)
+}
