@@ -47,6 +47,11 @@
         <a-select v-model:value="model.photoWallNameMode" class="settings-control" :options="nameOptions" />
       </SettingRow>
     </div>
+
+    <div class="settings-group">
+      <div class="settings-group__title">05 · 签到大屏模板</div>
+      <TemplateSelector v-model="model.screen.template" />
+    </div>
   </div>
 </template>
 
@@ -54,6 +59,7 @@
 import { watch } from 'vue'
 import { useDictionaryOptions } from '@/hooks/useDictionary'
 import SettingRow from './setting-row.vue'
+import TemplateSelector from './template-selector.vue'
 
 const model = defineModel({ type: Object, required: true })
 const modeOptions = useDictionaryOptions('checkin_mode', true)

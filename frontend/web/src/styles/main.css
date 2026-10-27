@@ -1,0 +1,93 @@
+@font-face {
+  font-family: 'Sora Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/sora/files/sora-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+:root {
+  color: #fff;
+  font-family:
+    Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  min-height: 180px;
+  overflow: hidden;
+  background: #070910;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.screen-intro {
+  display: flex;
+  margin: auto;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.screen-intro__eyebrow {
+  margin: 0 0 18px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.24em;
+}
+
+.screen-intro h1 {
+  margin: 0;
+  font-size: clamp(54px, 6vw, 104px);
+  font-weight: 760;
+  letter-spacing: -0.05em;
+}
+
+.screen-intro > p:not(.screen-intro__eyebrow) {
+  margin: 24px 0 18px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: clamp(16px, 1.3vw, 22px);
+}
+
+.screen-intro span {
+  color: rgba(255, 255, 255, 0.32);
+  font-size: 13px;
+}
+
+.screen-enter-active,
+.screen-leave-active {
+  transition:
+    opacity 240ms ease,
+    transform 240ms ease;
+}
+
+.screen-enter-from {
+  opacity: 0;
+  transform: scale(1.01);
+}
+
+.screen-leave-to {
+  opacity: 0;
+  transform: scale(0.99);
+}

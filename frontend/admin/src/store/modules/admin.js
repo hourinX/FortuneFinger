@@ -14,11 +14,12 @@ export const useAdminStore = defineStore('admin', {
     isLoggedIn: (state) => Boolean(state.token),
   },
   actions: {
-    async login(payload) {
+    async login(payload, afterAuthenticated) {
       const data = await loginApi(payload)
       setAuthTokens(data)
       this.token = getToken()
       this.expiresAt = getTokenExpiresAt()
+      if (afterAuthenticated) await afterAuthenticated()
       await this.loadProfile()
     },
     async restoreSession() {

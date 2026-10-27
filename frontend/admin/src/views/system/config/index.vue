@@ -140,6 +140,9 @@ const initialSettings = {
     duplicateMode: 'show',
     enterPhotoWall: true,
     photoWallNameMode: 'name_company',
+    screen: {
+      template: 'invitation',
+    },
   },
   upload: {
     imageMaxSize: 10,

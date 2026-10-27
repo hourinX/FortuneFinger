@@ -5,6 +5,7 @@ import { registerRouters, resetDynamicRoutes } from '@/router/dynamic'
 
 const VISITED_ROUTERS_KEY = 'fortunefinger-visited-routers'
 const VISITED_ROUTER_STATES_KEY = 'fortunefinger-visited-router-states'
+const FULLSCREEN_LOADING_DURATION = 1500
 
 function restoreVisitedRouters() {
   try {
@@ -35,6 +36,8 @@ export const useAppStore = defineStore('app', {
     visitedRouterStates: restoreVisitedRouterStates(),
     routersLoaded: false,
     dictionariesLoaded: false,
+    fullscreenLoading: false,
+    fullscreenLoadingStartedAt: 0,
   }),
   getters: {
     hasPermission: (state) => (code) => state.permissions.includes(code),
@@ -46,6 +49,24 @@ export const useAppStore = defineStore('app', {
     },
     restoreDefaults() {
       this.collapsed = false
+    },
+    startFullscreenLoading() {
+      if (this.fullscreenLoading) return
+      this.fullscreenLoadingStartedAt = Date.now()
+      this.fullscreenLoading = true
+    },
+    async finishFullscreenLoading() {
+      if (!this.fullscreenLoading) return
+      const startedAt = this.fullscreenLoadingStartedAt
+      const remaining = Math.max(0, FULLSCREEN_LOADING_DURATION - (Date.now() - startedAt))
+      if (remaining) await new Promise((resolve) => window.setTimeout(resolve, remaining))
+      if (this.fullscreenLoadingStartedAt !== startedAt) return
+      this.fullscreenLoading = false
+      this.fullscreenLoadingStartedAt = 0
+    },
+    stopFullscreenLoading() {
+      this.fullscreenLoading = false
+      this.fullscreenLoadingStartedAt = 0
     },
     addVisitedRouter(route) {
       if (!route.meta?.routerId) return

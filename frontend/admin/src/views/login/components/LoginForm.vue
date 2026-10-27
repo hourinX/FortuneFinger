@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   LockOutlined,
@@ -100,7 +100,7 @@ async function loadCaptcha() {
 async function submit() {
   loading.value = true
   try {
-    await admin.login({ ...form, remember: remember.value })
+    await admin.login({ ...form, remember: remember.value }, showTransitionLoading)
     await Promise.all([app.loadRouters(router), app.loadDictionaries()])
     const navigationFailure = await router.replace(String(route.query.redirect || '/dashboard'))
     if (navigationFailure) throw new Error('登录后页面跳转失败')
@@ -112,6 +112,7 @@ async function submit() {
       // 浏览器禁用本地存储时不影响已经完成的登录。
     }
   } catch (error) {
+    app.stopFullscreenLoading()
     if (admin.isLoggedIn) {
       await admin.logout()
       app.resetRouters()
@@ -125,8 +126,15 @@ async function submit() {
     form.captcha = ''
     await loadCaptcha()
   } finally {
+    transitioning.value = false
     loading.value = false
   }
+}
+
+async function showTransitionLoading() {
+  app.startFullscreenLoading()
+  await nextTick()
+  await new Promise((resolve) => requestAnimationFrame(resolve))
 }
 
 async function onVerificationPassed(token) {
