@@ -28,9 +28,10 @@ const { event, attendance, countdown, arrival } = createCheckinTemplateState(pro
         <h2>相聚坐标</h2>
         <strong>
           {{ event.checkedIn }}
-          <small>/ {{ event.total }}</small>
+          <small v-if="event.total !== null">/ {{ event.total }}</small>
         </strong>
         <div
+          v-if="event.total !== null"
           class="segments"
           role="progressbar"
           aria-label="签到进度"
@@ -44,7 +45,7 @@ const { event, attendance, countdown, arrival } = createCheckinTemplateState(pro
             :class="{ lit: n <= attendance / 5 }"
           ></i>
         </div>
-        <p>{{ attendance }}% 的伙伴已抵达</p>
+        <p v-if="event.total !== null">{{ attendance }}% 的伙伴已抵达</p>
       </aside>
       <div class="portal">
         <div

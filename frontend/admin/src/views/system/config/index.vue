@@ -55,6 +55,7 @@ import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConfig, saveConfig, sendTestMail } from '@/api/config'
 import { useAppStore } from '@/store'
+import { DAY_MILLISECONDS, getDateTimeDifference } from '@/utils/datetime'
 import BasicSettings from './components/basic.vue'
 import LotteryRuleSettings from './components/lottery-rule.vue'
 import MailSettings from './components/mail.vue'
@@ -134,6 +135,8 @@ const initialSettings = {
   },
   sign: {
     mode: 1,
+    checkin_start_time: '',
+    checkin_end_time: '',
     requireName: true,
     requireCompany: true,
     allowAvatar: true,
@@ -232,6 +235,26 @@ async function loadConfig(code) {
 
 async function saveCurrent() {
   const code = activeSection.value
+  if (code === 'sign') {
+    const sign = settings.sign
+    if (!sign.checkin_start_time || !sign.checkin_end_time) {
+      message.warning('请选择允许开始签到时间和签到截止时间')
+      return
+    }
+    const difference = getDateTimeDifference(sign.checkin_start_time, sign.checkin_end_time)
+    if (!Number.isFinite(difference)) {
+      message.warning('签到时间格式无效，请重新选择')
+      return
+    }
+    if (difference <= 0) {
+      message.warning('签到截止时间必须晚于允许开始签到时间')
+      return
+    }
+    if (difference > 7 * DAY_MILLISECONDS) {
+      message.warning('签到开放时长不能超过 7 天')
+      return
+    }
+  }
   saving.value = true
   try {
     const config = structuredClone(toRaw(settings[code]))

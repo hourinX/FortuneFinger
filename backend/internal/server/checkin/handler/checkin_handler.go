@@ -32,3 +32,33 @@ func (h *CheckinHandler) GetCheckinTemplateHandler(c *gin.Context) {
 	}
 	httpx.Ok(c, httpx.QuerySuccess, resp)
 }
+
+func (h *CheckinHandler) GetCheckinStateHandler(c *gin.Context) {
+	var req types.GetCheckinStateReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		httpx.Error(c, errorx.Wrap(errorx.InvalidParameter, "签到状态参数错误", err))
+		return
+	}
+
+	resp, err := h.logic.GetCheckinState(c.Request.Context(), &req)
+	if err != nil {
+		httpx.Error(c, err)
+		return
+	}
+	httpx.Ok(c, httpx.QuerySuccess, resp)
+}
+
+func (h *CheckinHandler) GetCheckinQRCodeHandler(c *gin.Context) {
+	var req types.GetCheckinQRCodeReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		httpx.Error(c, errorx.Wrap(errorx.InvalidParameter, "签到二维码参数错误", err))
+		return
+	}
+
+	resp, err := h.logic.GetCheckinQRCode(c.Request.Context(), &req)
+	if err != nil {
+		httpx.Error(c, err)
+		return
+	}
+	httpx.Ok(c, httpx.QuerySuccess, resp)
+}

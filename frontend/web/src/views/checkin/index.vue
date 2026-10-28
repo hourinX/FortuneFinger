@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { getCheckinTemplate } from '@/api/checkin'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import {
+  createCheckinStateSocket,
+  getCheckinQRCode,
+  getCheckinState,
+  getCheckinTemplate,
+  type CheckinStateMessage,
+  type CheckinStateResp,
+} from '@/api/checkin'
 import LoadingScreen from './components/LoadingScreen.vue'
 import { defaultTemplateId, resolveTemplate } from './templates'
 import { useCheckin, type CheckinContent, type CheckinSource } from './useCheckin'
@@ -9,9 +16,11 @@ const loadingCycleDuration = 1600
 const requestRetryDelay = 1500
 const source = reactive<CheckinSource>({
   qrCode: '',
-  checkedIn: 128,
-  total: 200,
-  deadline: Date.now() + 90 * 60 * 1000,
+  status: 'pending',
+  checkedIn: 0,
+  total: 0,
+  deadline: Date.now(),
+  serverTimeOffset: 0,
 })
 const content: CheckinContent = {
   company: 'FortuneFinger',
@@ -23,10 +32,13 @@ const loading = ref(true)
 const configuredTemplate = ref(defaultTemplateId)
 const activeTemplate = computed(() => resolveTemplate(configuredTemplate.value))
 let mounted = true
-let templateReady = false
+let initialReady = false
 let cycleTimer: number | undefined
 let retryTimer: number | undefined
+let socketRetryTimer: number | undefined
 let requestController: AbortController | undefined
+let stateSocket: WebSocket | undefined
+let qrRetryTimer: number | undefined
 
 function waitBeforeRetry() {
   return new Promise<void>((resolve) => {
@@ -34,14 +46,53 @@ function waitBeforeRetry() {
   })
 }
 
-async function loadTemplate() {
-  while (mounted && !templateReady) {
+function applyCheckinState(state: CheckinStateResp) {
+  const wasActive = source.status === 'active'
+  source.status = state.status
+  source.serverTimeOffset = Date.parse(state.server_time) - Date.now()
+  source.deadline = Date.parse(state.checkin_end_time)
+  checkin.setAttendance(state.checked_in, state.total)
+  if (state.status !== 'active') {
+    checkin.setQRCode('')
+  } else if (!wasActive && initialReady) {
+    void refreshQRCode()
+  }
+}
+
+async function refreshQRCode(signal?: AbortSignal) {
+  window.clearTimeout(qrRetryTimer)
+  if (source.status !== 'active') {
+    checkin.setQRCode('')
+    return
+  }
+  try {
+    const qr = await getCheckinQRCode(signal)
+    if (!mounted || source.status !== 'active') return
+    checkin.setQRCode(qr.qrcode, qr.expires_at)
+  } catch {
+    if (!mounted || source.status !== 'active') return
+    checkin.setQRCode('')
+    qrRetryTimer = window.setTimeout(() => void refreshQRCode(), 2000)
+  }
+}
+
+async function loadInitialData() {
+  while (mounted && !initialReady) {
     requestController = new AbortController()
     try {
-      const resp = await getCheckinTemplate(requestController.signal)
+      const [template, state] = await Promise.all([
+        getCheckinTemplate(requestController.signal),
+        getCheckinState(requestController.signal),
+      ])
       if (!mounted) return
-      configuredTemplate.value = resp.template
-      templateReady = true
+      configuredTemplate.value = template.template
+      applyCheckinState(state)
+      if (state.status === 'active') {
+        await refreshQRCode(requestController.signal)
+      }
+      if (!mounted) return
+      initialReady = true
+      connectStateSocket()
     } catch {
       if (!mounted) return
       await waitBeforeRetry()
@@ -49,10 +100,48 @@ async function loadTemplate() {
   }
 }
 
+async function refreshStateBeforeReconnect() {
+  try {
+    const state = await getCheckinState()
+    if (mounted) applyCheckinState(state)
+  } catch {
+    // WebSocket 重连会继续尝试，当前页面保留最后一次有效快照。
+  }
+}
+
+function scheduleSocketReconnect() {
+  window.clearTimeout(socketRetryTimer)
+  socketRetryTimer = window.setTimeout(async () => {
+    if (!mounted) return
+    await refreshStateBeforeReconnect()
+    if (mounted) connectStateSocket()
+  }, 2000)
+}
+
+function connectStateSocket() {
+  stateSocket?.close()
+  const socket = createCheckinStateSocket()
+  stateSocket = socket
+  socket.addEventListener('message', (event) => {
+    try {
+      const message = JSON.parse(event.data) as CheckinStateMessage
+      if (message.key === 'checkin.state' && message.data) {
+        applyCheckinState(message.data)
+      }
+    } catch {
+      // 忽略无法识别的非业务消息，保持当前有效状态。
+    }
+  })
+  socket.addEventListener('close', () => {
+    if (stateSocket === socket) stateSocket = undefined
+    if (mounted) scheduleSocketReconnect()
+  })
+}
+
 function playLoadingCycle() {
   cycleTimer = window.setTimeout(() => {
     if (!mounted) return
-    if (templateReady) {
+    if (initialReady) {
       loading.value = false
       return
     }
@@ -61,15 +150,23 @@ function playLoadingCycle() {
 }
 
 onMounted(() => {
-  void loadTemplate()
+  void loadInitialData()
   playLoadingCycle()
 })
+
+watch(
+  () => checkin.qr.refreshVersion,
+  () => void refreshQRCode(),
+)
 
 onBeforeUnmount(() => {
   mounted = false
   requestController?.abort()
+  stateSocket?.close()
   window.clearTimeout(cycleTimer)
   window.clearTimeout(retryTimer)
+  window.clearTimeout(socketRetryTimer)
+  window.clearTimeout(qrRetryTimer)
 })
 </script>
 

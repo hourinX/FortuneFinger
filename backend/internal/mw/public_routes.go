@@ -9,6 +9,9 @@ var publicRoutes = map[string]struct{}{
 	http.MethodPost + " /api/auth/verification/create": {},
 	http.MethodPost + " /api/auth/verification/verify": {},
 	http.MethodGet + " /api/checkin/template":          {},
+	http.MethodGet + " /api/checkin/state":             {},
+	http.MethodGet + " /api/checkin/qrcode":            {},
+	http.MethodGet + " /api/ws":                        {},
 }
 
 func isPublicRoute(method, path string) bool {

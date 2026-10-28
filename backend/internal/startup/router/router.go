@@ -3,10 +3,12 @@ package router
 import (
 	"fortunefinger/backend/internal/mw"
 	"fortunefinger/backend/internal/pkg/requestctx"
+	"fortunefinger/backend/internal/pkg/ws"
 	"fortunefinger/backend/internal/server/asset"
 	"fortunefinger/backend/internal/server/checkin"
 	"fortunefinger/backend/internal/server/core"
 	"fortunefinger/backend/internal/server/prize"
+	"fortunefinger/backend/internal/server/socket"
 	"fortunefinger/backend/internal/server/user"
 	"fortunefinger/backend/internal/svc"
 
@@ -18,6 +20,10 @@ func New(svcCtx *svc.ServiceContext) *gin.Engine {
 	r.Use(mw.Recovery(svcCtx.Logger))
 	r.Use(mw.JWT(svcCtx.JWT, svcCtx.Logger))
 	r.Use(requestctx.Middleware())
+
+	socketManager := ws.NewManager()
+	checkin.RegisterSocket(socketManager, svcCtx)
+	socket.Register(r, socketManager)
 
 	asset.Register(r, svcCtx)
 	checkin.Register(r, svcCtx)

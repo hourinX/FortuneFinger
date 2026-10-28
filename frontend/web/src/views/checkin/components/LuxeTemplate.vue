@@ -2,8 +2,10 @@
 import EventBrand from '@/components/EventBrand.vue'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { createCheckinTemplateState, type CheckinTemplateProps } from '../useCheckin'
+import QrCodeImage from './QrCodeImage.vue'
 const props = defineProps<CheckinTemplateProps>()
-const { event, closed, refreshing, refreshSeconds, attendance, countdown, deadlineLabel } =
+const qr = props.qr
+const { event, closed, refreshing, refreshSeconds, attendance, countdown, deadlineLabel, hasTotal, qrActive, status } =
   createCheckinTemplateState(props)
 const paused = ref(document.hidden)
 function visibility() {
@@ -629,10 +631,11 @@ const stars = Array.from({ length: 78 }, (_, i) => ({
               >
                 {{ event.checkedIn }}
               </strong>
-              <span>/ {{ event.total }} 位</span>
+              <span v-if="hasTotal">/ {{ event.total }} 位</span>
             </div>
           </div>
           <div
+            v-if="hasTotal"
             class="attendance-ring"
             role="progressbar"
             aria-label="签到进度"
@@ -641,6 +644,7 @@ const stars = Array.from({ length: 78 }, (_, i) => ({
             aria-valuemax="100"
           >
             <svg
+              v-if="qrActive"
               viewBox="0 0 64 64"
               aria-hidden="true"
             >
@@ -693,26 +697,18 @@ const stars = Array.from({ length: 78 }, (_, i) => ({
             class="qr"
             :class="{ refreshing }"
           >
-            <svg
-              viewBox="0 0 64 64"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M8 24V8h16M40 8h16v16M56 40v16H40M24 56H8V40M25 25h14v14H25Z"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-            </svg>
-            <strong>
-              {{ closed ? '签到已结束' : refreshing ? '二维码已刷新' : '签到二维码' }}
+            <QrCodeImage
+              v-if="qrActive && qr.value"
+              :value="qr.value"
+            />
+            <strong v-else>
+              {{ status === 'pending' ? '签到尚未开始' : closed ? '已停止签到' : '二维码加载中' }}
             </strong>
-            <small>演示占位 · 不可扫描</small>
           </div>
         </div>
         <h2>扫码入席</h2>
         <p>席位已备，静候光临</p>
-        <span class="refresh">{{ closed ? '已停止刷新' : `${refreshSeconds}s 后更新签到码` }}</span>
+        <span class="refresh">{{ qrActive ? `${refreshSeconds}s 后更新签到码` : '签到二维码暂不可用' }}</span>
       </section>
     </section>
     <footer>

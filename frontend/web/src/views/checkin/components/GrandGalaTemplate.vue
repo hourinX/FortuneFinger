@@ -2,8 +2,10 @@
 import EventBrand from '@/components/EventBrand.vue'
 import { createCheckinTemplateState, type CheckinTemplateProps } from '../useCheckin'
 import CelebrationParticles from './CelebrationParticles.vue'
+import QrCodeImage from './QrCodeImage.vue'
 const props = defineProps<CheckinTemplateProps>()
-const { event, countdown, refreshing, closed, refreshSeconds } = createCheckinTemplateState(props)
+const qr = props.qr
+const { event, countdown, refreshing, closed, refreshSeconds, hasTotal, qrActive, status } = createCheckinTemplateState(props)
 const year = new Date(event.deadline).getFullYear()
 // 确定性的建筑轮廓，避免组件重渲染时城市跳变。
 const buildings = Array.from({ length: 66 }, (_, i) => ({
@@ -291,24 +293,16 @@ const buildings = Array.from({ length: 66 }, (_, i) => ({
           class="qr"
           :class="{ refreshing }"
         >
-          <svg
-            viewBox="0 0 64 64"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M8 24V8h16M40 8h16v16M56 40v16H40M24 56H8V40M25 25h14v14H25Z"
-              stroke="currentColor"
-              stroke-width="3"
-            />
-          </svg>
-          <strong>{{ closed ? '签到已截止' : refreshing ? '二维码已刷新' : '签到二维码' }}</strong>
-          <small>演示占位 · 不可扫描</small>
+          <QrCodeImage
+            v-if="qrActive && qr.value"
+            :value="qr.value"
+          />
+          <strong v-else>{{ status === 'pending' ? '签到尚未开始' : closed ? '已停止签到' : '二维码加载中' }}</strong>
         </div>
         <h2>扫码签到</h2>
         <p class="invitation">— 期待与您共赴美好 —</p>
         <span class="refresh-label">
-          {{ closed ? '签到通道已关闭' : `二维码每 30 秒更新 · ${refreshSeconds}s` }}
+          {{ qrActive ? `二维码每 30 秒更新 · ${refreshSeconds}s` : '签到二维码暂不可用' }}
         </span>
       </div>
       <footer>
@@ -316,7 +310,7 @@ const buildings = Array.from({ length: 66 }, (_, i) => ({
         <span>
           已签到
           <b>{{ event.checkedIn }}</b>
-          / {{ event.total }} 人
+          <template v-if="hasTotal">/ {{ event.total }} 人</template>
         </span>
         <span>
           距签到截止

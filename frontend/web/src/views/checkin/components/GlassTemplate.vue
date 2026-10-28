@@ -44,10 +44,10 @@ const { event, countdown, attendance } = createCheckinTemplateState(props)
         <small>已到场 / 总人数</small>
         <strong>
           {{ event.checkedIn }}
-          <em>/ {{ event.total }}</em>
+          <em v-if="event.total !== null">/ {{ event.total }}</em>
         </strong>
       </div>
-      <div class="progress">
+      <div v-if="event.total !== null" class="progress">
         <small>相聚进度 {{ attendance }}%</small>
         <progress
           :value="attendance"

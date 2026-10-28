@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import EventBrand from '@/components/EventBrand.vue'
 import { createCheckinTemplateState, type CheckinTemplateProps } from '../useCheckin'
+import QrCodeImage from './QrCodeImage.vue'
 
 const props = defineProps<CheckinTemplateProps & { theme: 'invitation' | 'celebration' | 'luxe' }>()
+const qr = props.qr
 const state = createCheckinTemplateState(props)
 const {
   event,
@@ -14,6 +16,9 @@ const {
   refreshProgress,
   attendance,
   deadlineLabel,
+  hasTotal,
+  qrActive,
+  status,
 } = state
 </script>
 
@@ -71,12 +76,13 @@ const {
           </div>
           <div class="attendance-numbers">
             <strong>{{ event.checkedIn }}</strong>
-            <span>
+            <span v-if="hasTotal">
               / {{ event.total }}
               <small>位伙伴</small>
             </span>
           </div>
           <div
+            v-if="hasTotal"
             class="track"
             role="progressbar"
             aria-label="签到进度"
@@ -86,7 +92,7 @@ const {
           >
             <span :style="{ width: `${attendance}%` }"></span>
           </div>
-          <div class="progress-caption">
+          <div v-if="hasTotal" class="progress-caption">
             <span>每一份到场，都让相聚更完整。</span>
             <strong>{{ attendance }}%</strong>
           </div>
@@ -116,27 +122,14 @@ const {
               <span class="corner corner-tr"></span>
               <span class="corner corner-bl"></span>
               <span class="corner corner-br"></span>
-              <svg
-                viewBox="0 0 64 64"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M8 24V8h16M40 8h16v16M56 40v16H40M24 56H8V40"
-                  stroke="currentColor"
-                  stroke-width="3"
-                />
-                <path
-                  d="M24 24h16v16H24z"
-                  stroke="currentColor"
-                  stroke-width="3"
-                />
-              </svg>
-              <strong>{{ closed ? '签到通道已关闭' : '签到二维码' }}</strong>
-              <span>演示占位 · 不可扫描</span>
+              <QrCodeImage
+                v-if="qrActive && qr.value"
+                :value="qr.value"
+              />
+              <strong v-else>{{ status === 'pending' ? '签到尚未开始' : closed ? '已停止签到' : '二维码加载中' }}</strong>
             </div>
             <div
-              v-if="refreshing && !closed"
+              v-if="refreshing && qrActive"
               class="refresh-feedback"
               role="status"
             >
@@ -159,11 +152,11 @@ const {
                 stroke-linejoin="round"
               />
             </svg>
-            <span>{{ closed ? '已停止刷新' : '二维码每 30 秒自动更新' }}</span>
-            <strong v-if="!closed">{{ refreshSeconds }}s</strong>
+            <span>{{ qrActive ? '二维码每 30 秒自动更新' : '签到二维码暂不可用' }}</span>
+            <strong v-if="qrActive">{{ refreshSeconds }}s</strong>
           </div>
           <div class="refresh-track">
-            <span :style="{ width: `${closed ? 0 : refreshProgress}%` }"></span>
+            <span :style="{ width: `${qrActive ? refreshProgress : 0}%` }"></span>
           </div>
         </div>
         <div class="ticket-bottom">

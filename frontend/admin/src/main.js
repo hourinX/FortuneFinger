@@ -6,7 +6,10 @@ import App from './App.vue'
 import router from './router'
 import { pinia } from './store'
 import directives from './directives'
+import { setupDateTimeLocale } from './utils/datetime'
 import './assets/styles/main.less'
+
+setupDateTimeLocale()
 
 const app = createApp(App)
 

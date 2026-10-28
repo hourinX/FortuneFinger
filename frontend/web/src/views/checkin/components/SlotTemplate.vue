@@ -69,7 +69,7 @@ onUnmounted(() => clearTimeout(timer))
           <small>已到场</small>
           <strong>
             {{ event.checkedIn }}
-            <em>/ {{ event.total }}</em>
+            <em v-if="event.total !== null">/ {{ event.total }}</em>
           </strong>
           <span>位伙伴已加入</span>
         </div>

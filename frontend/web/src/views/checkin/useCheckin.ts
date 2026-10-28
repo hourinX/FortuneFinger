@@ -3,9 +3,11 @@ import { computed, onMounted, onUnmounted, reactive, ref, toRef, type Reactive }
 
 export interface CheckinSource {
   qrCode: string
+  status: 'pending' | 'active' | 'ended'
   checkedIn: number
-  total: number
+  total: number | null
   deadline: number
+  serverTimeOffset: number
 }
 
 export interface CheckinContent {
@@ -17,7 +19,7 @@ export interface CheckinContent {
 export function useCheckin(source: Reactive<CheckinSource>) {
   const arrival = ref(0)
   const refreshPeriod = 30_000
-  const now = ref(Date.now())
+  const now = ref(Date.now() + source.serverTimeOffset)
   const nextRefresh = ref(now.value + refreshPeriod)
   const refreshing = ref(false)
   const refreshVersion = ref(0)
@@ -25,7 +27,7 @@ export function useCheckin(source: Reactive<CheckinSource>) {
   let feedback: ReturnType<typeof setTimeout> | undefined
 
   const remaining = computed(() => Math.max(0, Math.ceil((source.deadline - now.value) / 1000)))
-  const closed = computed(() => remaining.value === 0)
+  const closed = computed(() => source.status === 'ended' || remaining.value === 0)
   const countdown = computed(() => [
     Math.floor(remaining.value / 3600),
     Math.floor((remaining.value % 3600) / 60),
@@ -34,7 +36,9 @@ export function useCheckin(source: Reactive<CheckinSource>) {
   const refreshSeconds = computed(() => Math.max(0, Math.ceil((nextRefresh.value - now.value) / 1000)))
   const refreshProgress = computed(() => Math.max(0, Math.min(100, ((nextRefresh.value - now.value) / refreshPeriod) * 100)))
   const attendanceProgress = computed(() => (
-    source.total > 0 ? Math.min(100, Math.round((source.checkedIn / source.total) * 100)) : 0
+    source.total !== null && source.total > 0
+      ? Math.min(100, Math.round((source.checkedIn / source.total) * 100))
+      : 0
   ))
   const deadlineLabel = computed(() => new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
@@ -48,6 +52,9 @@ export function useCheckin(source: Reactive<CheckinSource>) {
     get value() {
       return source.qrCode
     },
+    get active() {
+      return source.status === 'active'
+    },
     refreshing,
     refreshVersion,
     refreshSeconds,
@@ -60,6 +67,9 @@ export function useCheckin(source: Reactive<CheckinSource>) {
     get total() {
       return source.total
     },
+    get hasTotal() {
+      return source.total !== null
+    },
     progress: attendanceProgress,
     arrival,
   })
@@ -67,21 +77,36 @@ export function useCheckin(source: Reactive<CheckinSource>) {
     get value() {
       return source.deadline
     },
+    get status() {
+      return source.status
+    },
     closed,
     countdown,
     label: deadlineLabel,
   })
 
   function simulateArrival() {
-    if (deadline.closed || source.checkedIn >= source.total) return
+    if (source.status !== 'active' || (source.total !== null && source.checkedIn >= source.total)) return
     source.checkedIn += 1
     arrival.value += 1
   }
 
+  function setAttendance(checkedIn: number, total: number | null) {
+    if (checkedIn > source.checkedIn) {
+      arrival.value += checkedIn - source.checkedIn
+    }
+    source.checkedIn = checkedIn
+    source.total = total
+  }
+
+  function setQRCode(value: string, expiresAt?: string) {
+    source.qrCode = value
+    nextRefresh.value = expiresAt ? Date.parse(expiresAt) : now.value + refreshPeriod
+  }
+
   function tick() {
-    now.value = Date.now()
-    if (deadline.closed) {
-      clearInterval(clock)
+    now.value = Date.now() + source.serverTimeOffset
+    if (source.status !== 'active') {
       return
     }
     if (now.value >= nextRefresh.value) {
@@ -103,7 +128,7 @@ export function useCheckin(source: Reactive<CheckinSource>) {
     clearTimeout(feedback)
   })
 
-  return { qr, attendance, deadline, simulateArrival }
+  return { qr, attendance, deadline, setAttendance, setQRCode, simulateArrival }
 }
 
 export type CheckinViewState = ReturnType<typeof useCheckin>
@@ -143,11 +168,14 @@ export function createCheckinTemplateState(props: CheckinTemplateProps) {
     refreshVersion: toRef(props.qr, 'refreshVersion'),
     refreshSeconds: toRef(props.qr, 'refreshSeconds'),
     refreshProgress: toRef(props.qr, 'refreshProgress'),
+    qrActive: toRef(props.qr, 'active'),
     attendance: toRef(props.attendance, 'progress'),
+    hasTotal: toRef(props.attendance, 'hasTotal'),
     arrival: toRef(props.attendance, 'arrival'),
     closed: toRef(props.deadline, 'closed'),
     countdown: toRef(props.deadline, 'countdown'),
     deadlineLabel: toRef(props.deadline, 'label'),
+    status: toRef(props.deadline, 'status'),
   }
 }
 

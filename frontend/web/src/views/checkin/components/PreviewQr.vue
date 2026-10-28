@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CheckinTemplateProps } from '../useCheckin'
+import QrCodeImage from './QrCodeImage.vue'
 
 defineProps<Pick<CheckinTemplateProps, 'qr' | 'deadline'>>()
 </script>
@@ -7,23 +8,18 @@ defineProps<Pick<CheckinTemplateProps, 'qr' | 'deadline'>>()
   <div class="scan-block">
     <div
       class="placeholder"
-      :class="{ flash: qr.refreshing }"
+      :class="{ flash: qr.refreshing, inactive: !qr.active }"
     >
-      <svg
-        viewBox="0 0 64 64"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M8 24V8h16M40 8h16v16M56 40v16H40M24 56H8V40M25 25h14v14H25Z"
-          stroke="currentColor"
-          stroke-width="3"
-        />
-      </svg>
-      <strong>{{ deadline.closed ? '签到已结束' : qr.refreshing ? '二维码已刷新' : '扫码加入现场' }}</strong>
-      <small>演示占位 · 不可扫描</small>
+      <QrCodeImage
+        v-if="qr.active && qr.value"
+        :value="qr.value"
+      />
+      <strong v-else>
+        {{ deadline.status === 'pending' ? '签到尚未开始' : deadline.closed ? '已停止签到' : qr.refreshing ? '二维码已刷新' : '扫码加入现场' }}
+      </strong>
+      <small v-if="qr.active && !qr.value">二维码加载中</small>
     </div>
-    <p>{{ deadline.closed ? '已停止刷新' : `${qr.refreshSeconds}s 后刷新 · 打开手机扫一扫` }}</p>
+    <p>{{ qr.active ? `${qr.refreshSeconds}s 后刷新 · 打开手机扫一扫` : '签到二维码暂不可用' }}</p>
   </div>
 </template>
 <style scoped>
@@ -61,5 +57,9 @@ defineProps<Pick<CheckinTemplateProps, 'qr' | 'deadline'>>()
 }
 .flash {
   box-shadow: 0 0 35px #c5e8ff80;
+}
+.inactive {
+  min-height: 150px;
+  aspect-ratio: auto;
 }
 </style>
