@@ -1,0 +1,23 @@
+version: 2
+
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+
+    schedule:
+      interval: "daily"
+      time: "12:00"
+      timezone: "Asia/Shanghai"
+
+    allow:
+      - dependency-name: "github.com/hourinX/gdenticon/v2"
+
+    cooldown:
+      default-days: 3
+      exclude:
+        - "github.com/hourinX/gdenticon/v2"
+
+    open-pull-requests-limit: 1
+
+    commit-message:
+      prefix: "chore(deps)"
