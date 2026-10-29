@@ -282,7 +282,6 @@ func (l *userLogic) CreateUser(ctx context.Context, req *types.CreateUserReq) er
 		UpdatedBy: operatorID,
 	}
 
-	var avatarPath string
 	if err := l.svcCtx.GormDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		userRepo := repository.NewUserRepository(tx, l.svcCtx.Snowflake)
 		userID, createErr := userRepo.Create(ctx, user)
@@ -297,7 +296,6 @@ func (l *userLogic) CreateUser(ctx context.Context, req *types.CreateUserReq) er
 			return createErr
 		}
 
-		avatarPath = avatar.Path
 		if createErr = userRepo.Update(
 			ctx,
 			userID, map[string]any{
@@ -318,18 +316,6 @@ func (l *userLogic) CreateUser(ctx context.Context, req *types.CreateUserReq) er
 		})
 		return createErr
 	}); err != nil {
-		if avatarPath != "" {
-			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-			defer cancel()
-
-			if deleteErr := l.svcCtx.Storage.DeleteObject(cleanupCtx, avatarPath); deleteErr != nil {
-				l.svcCtx.Logger.Error("[UserLogic] 清理新增用户头像失败",
-					zap.String("username", req.Username),
-					zap.String("path", avatarPath),
-					zap.Error(deleteErr),
-				)
-			}
-		}
 		l.svcCtx.Logger.Error("[UserLogic] 新增用户失败", zap.String("username", req.Username), zap.Error(err))
 		return err
 	}

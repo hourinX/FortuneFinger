@@ -2,11 +2,11 @@ version: 2
 
 updates:
   - package-ecosystem: "gomod"
-    directory: "/"
+    directory: "/backend"
 
     schedule:
       interval: "daily"
-      time: "12:00"
+      time: "14:00"
       timezone: "Asia/Shanghai"
 
     allow:
