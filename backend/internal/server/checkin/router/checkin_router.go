@@ -12,5 +12,6 @@ func RegisterCheckin(r *gin.Engine, h *handler.CheckinHandler) {
 		checkin.GET("/template", h.GetCheckinTemplateHandler)
 		checkin.GET("/state", h.GetCheckinStateHandler)
 		checkin.GET("/qrcode", h.GetCheckinQRCodeHandler)
+		checkin.POST("/session", h.CreateCheckinSessionHandler)
 	}
 }

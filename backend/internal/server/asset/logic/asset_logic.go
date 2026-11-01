@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,7 +115,7 @@ func (l *assetLogic) GenerateAvatar(ctx context.Context, _ *types.GenerateAvatar
 		return nil, err
 	}
 
-	result, err := l.avatarGenerator.GeneratePNG(ctx, operatorID)
+	result, err := l.avatarGenerator.GeneratePNG(ctx, strconv.FormatUint(operatorID, 10), operatorID)
 	if err != nil {
 		return nil, err
 	}

@@ -45,6 +45,8 @@ type Message struct {
 	Data any    `json:"data"`
 }
 
+type queryKey struct{}
+
 type Manager struct {
 	mu       sync.RWMutex
 	topics   map[string]Topic
@@ -83,6 +85,7 @@ func (m *Manager) Serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return errorx.New(errorx.NotFound, "WebSocket订阅主题不存在")
 	}
 
+	ctx = context.WithValue(ctx, queryKey{}, r.URL.Query())
 	initial, err := topic.Load(ctx)
 	if err != nil {
 		return err
@@ -144,6 +147,11 @@ func (m *Manager) Serve(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			lastFingerprint = currentFingerprint
 		}
 	}
+}
+
+func Query(ctx context.Context, name string) string {
+	values, _ := ctx.Value(queryKey{}).(url.Values)
+	return values.Get(name)
 }
 
 func (m *Manager) topic(key string) (Topic, bool) {

@@ -65,4 +65,18 @@ type UpdatePoolReq struct {
 	PoolReq
 }
 
+type GetPoolOptionsReq struct {
+	OrgID uint64 `form:"org_id" binding:"required"`
+}
+
+type GetPoolOptionsResp struct {
+	List []PoolOption `json:"list"`
+}
+
+type PoolOption struct {
+	ID    uint64 `json:"id,string"`
+	Name  string `json:"name"`
+	Level string `json:"level"`
+}
+
 //endregion

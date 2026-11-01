@@ -26,7 +26,9 @@ func RegisterSocket(manager *ws.Manager, svcCtx *svc.ServiceContext) {
 		Interval: 2 * time.Second,
 		Mode:     ws.PushOnChange,
 		Load: func(ctx context.Context) (any, error) {
-			return checkinLogic.GetCheckinState(ctx, &types.GetCheckinStateReq{})
+			return checkinLogic.GetCheckinState(ctx, &types.GetCheckinStateReq{
+				Code: ws.Query(ctx, "code"),
+			})
 		},
 		Fingerprint: func(data any) ([]byte, error) {
 			state, ok := data.(*types.GetCheckinStateResp)
@@ -34,17 +36,21 @@ func RegisterSocket(manager *ws.Manager, svcCtx *svc.ServiceContext) {
 				return json.Marshal(data)
 			}
 			return json.Marshal(struct {
-				Status           string  `json:"status"`
-				CheckinStartTime string  `json:"checkin_start_time"`
-				CheckinEndTime   string  `json:"checkin_end_time"`
-				CheckedIn        uint64  `json:"checked_in"`
-				Total            *uint64 `json:"total"`
+				Status            string  `json:"status"`
+				ActivityStartTime string  `json:"activity_start_time"`
+				ActivityEndTime   string  `json:"activity_end_time"`
+				CheckinStartTime  string  `json:"checkin_start_time"`
+				CheckinEndTime    string  `json:"checkin_end_time"`
+				CheckedIn         uint64  `json:"checked_in"`
+				Total             *uint64 `json:"total"`
 			}{
-				Status:           state.Status,
-				CheckinStartTime: state.CheckinStartTime,
-				CheckinEndTime:   state.CheckinEndTime,
-				CheckedIn:        state.CheckedIn,
-				Total:            state.Total,
+				Status:            state.Status,
+				ActivityStartTime: state.ActivityStartTime,
+				ActivityEndTime:   state.ActivityEndTime,
+				CheckinStartTime:  state.CheckinStartTime,
+				CheckinEndTime:    state.CheckinEndTime,
+				CheckedIn:         state.CheckedIn,
+				Total:             state.Total,
 			})
 		},
 	})

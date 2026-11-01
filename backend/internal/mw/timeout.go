@@ -12,6 +12,7 @@ import (
 	"fortunefinger/backend/internal/pkg/errorx"
 	"fortunefinger/backend/internal/pkg/httpx"
 
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
@@ -19,6 +20,11 @@ const requestTimeout = 10 * time.Second
 
 func Timeout(log *zap.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if websocket.IsWebSocketUpgrade(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
 		defer cancel()
 

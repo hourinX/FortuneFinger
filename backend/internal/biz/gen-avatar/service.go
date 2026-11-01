@@ -3,7 +3,6 @@ package genavatar
 import (
 	"bytes"
 	"context"
-	"strconv"
 
 	storageupload "fortunefinger/backend/internal/biz/storage-upload"
 	"fortunefinger/backend/internal/pkg/errorx"
@@ -32,10 +31,10 @@ func NewService(svcCtx *svc.ServiceContext) *Service {
 	}
 }
 
-func (s *Service) GeneratePNG(ctx context.Context, userID uint64) (*Result, error) {
-	data, err := renderPNG(userID)
+func (s *Service) GeneratePNG(ctx context.Context, identifier string, operatorID uint64) (*Result, error) {
+	data, err := renderPNG(identifier)
 	if err != nil {
-		s.svcCtx.Logger.Error("[GenerateAvatar] 生成默认头像失败", zap.Uint64("user_id", userID), zap.Error(err))
+		s.svcCtx.Logger.Error("[GenerateAvatar] 生成默认头像失败", zap.Uint64("operator_id", operatorID), zap.Error(err))
 		return nil, errorx.Wrap(errorx.InternalServer, "生成头像失败", err)
 	}
 
@@ -46,7 +45,7 @@ func (s *Service) GeneratePNG(ctx context.Context, userID uint64) (*Result, erro
 		Extension:   "png",
 		ContentType: "image/png",
 		Scene:       avatarScene,
-		OperatorID:  userID,
+		OperatorID:  operatorID,
 	})
 	if err != nil {
 		return nil, err
@@ -58,9 +57,9 @@ func (s *Service) GeneratePNG(ctx context.Context, userID uint64) (*Result, erro
 	}, nil
 }
 
-func renderPNG(userID uint64) ([]byte, error) {
-	icon, err := gdenticon.Generate(strconv.FormatUint(userID, 10), gdenticon.GenerateOptions{
-		GridSize: gdenticon.DefaultGridSize,
+func renderPNG(identifier string) ([]byte, error) {
+	icon, err := gdenticon.Generate(identifier, gdenticon.GenerateOptions{
+		GridSize: 7,
 		Mirror:   gdenticon.DefaultMirror,
 		Format:   gdenticon.FormatPNG,
 	})

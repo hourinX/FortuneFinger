@@ -22,6 +22,8 @@ type PrizeListFilter struct {
 
 type PrizeRepository interface {
 	List(ctx context.Context, filter PrizeListFilter) ([]model.FortunePrize, int64, error)
+	ListOptions(ctx context.Context, orgID uint64) ([]model.FortunePrize, error)
+	FindByIDs(ctx context.Context, ids []uint64) ([]model.FortunePrize, error)
 	FindByID(ctx context.Context, id uint64) (*model.FortunePrize, error)
 	FindByOrgIDAndLevel(ctx context.Context, orgID uint64, level string) (*model.FortunePrize, error)
 	Create(ctx context.Context, prize *model.FortunePrize) (uint64, error)
@@ -62,6 +64,31 @@ func (r *prizeRepository) List(ctx context.Context, filter PrizeListFilter) ([]m
 		return nil, 0, errorx.Wrap(errorx.DatabaseError, "查询奖品列表失败", err)
 	}
 	return prizes, total, nil
+}
+
+func (r *prizeRepository) ListOptions(ctx context.Context, orgID uint64) ([]model.FortunePrize, error) {
+	var prizes []model.FortunePrize
+	if err := r.db.WithContext(ctx).
+		Select("id", "name", "level").
+		Where("org_id = ? AND status = ? AND deleted_at = ?", orgID, 1, 0).
+		Order("sort ASC, id DESC").
+		Find(&prizes).Error; err != nil {
+		return nil, errorx.Wrap(errorx.DatabaseError, "查询奖品选项失败", err)
+	}
+	return prizes, nil
+}
+
+func (r *prizeRepository) FindByIDs(ctx context.Context, ids []uint64) ([]model.FortunePrize, error) {
+	if len(ids) == 0 {
+		return []model.FortunePrize{}, nil
+	}
+	var prizes []model.FortunePrize
+	if err := r.db.WithContext(ctx).
+		Where("id IN ? AND deleted_at = ?", ids, 0).
+		Find(&prizes).Error; err != nil {
+		return nil, errorx.Wrap(errorx.DatabaseError, "查询奖品列表失败", err)
+	}
+	return prizes, nil
 }
 
 func (r *prizeRepository) FindByID(ctx context.Context, id uint64) (*model.FortunePrize, error) {

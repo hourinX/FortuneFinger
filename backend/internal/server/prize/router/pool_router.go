@@ -15,5 +15,6 @@ func RegisterPool(r *gin.Engine, h *handler.PoolHandler, check mw.Checker) {
 		pool.POST("/create", mw.CheckPermission("prize:pool:add", check), h.CreatePoolHandler)
 		pool.PUT("/update/:id", mw.CheckPermission("prize:pool:edit", check), h.UpdatePoolHandler)
 		pool.DELETE("/:id", mw.CheckPermission("prize:pool:del", check), h.DeletePoolHandler)
+		pool.GET("/options", h.GetPoolOptionsHandler)
 	}
 }

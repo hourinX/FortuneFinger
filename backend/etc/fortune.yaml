@@ -3,6 +3,9 @@ Service:
   Host: 0.0.0.0
   Port: 6327
 
+Participant:
+  BaseURL: http://192.168.0.182:5175
+
 Log:
   ServiceName: fortunefinger
   Mode: console

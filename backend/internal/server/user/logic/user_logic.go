@@ -291,7 +291,18 @@ func (l *userLogic) CreateUser(ctx context.Context, req *types.CreateUserReq) er
 
 		txSvcCtx := *l.svcCtx
 		txSvcCtx.GormDB = tx
-		avatar, createErr := genavatar.NewService(&txSvcCtx).GeneratePNG(ctx, userID)
+		identifier := req.Email
+		if identifier == "" {
+			identifier = req.Mobile
+		}
+		if identifier == "" {
+			identifier = strconv.FormatUint(userID, 10)
+		}
+		avatar, createErr := genavatar.NewService(&txSvcCtx).GeneratePNG(
+			ctx,
+			identifier,
+			operatorID,
+		)
 		if createErr != nil {
 			return createErr
 		}

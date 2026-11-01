@@ -12,6 +12,7 @@ import (
 
 type Config struct {
 	Service              Service              `yaml:"Service" mapstructure:"Service"`
+	Participant          Participant          `yaml:"Participant" mapstructure:"Participant"`
 	Database             Database             `yaml:"Database" mapstructure:"Database"`
 	Redis                redisc.Config        `yaml:"Redis" mapstructure:"Redis"`
 	JWT                  JWT                  `yaml:"JWT" mapstructure:"JWT"`
@@ -21,6 +22,10 @@ type Config struct {
 	Snowflake            Snowflake            `yaml:"Snowflake" mapstructure:"Snowflake"`
 	Storage              storage.Config       `yaml:"Storage" mapstructure:"Storage"`
 	Log                  logger.Config        `yaml:"Log" mapstructure:"Log"`
+}
+
+type Participant struct {
+	BaseURL string `yaml:"BaseURL" mapstructure:"BaseURL"`
 }
 
 type Service struct {

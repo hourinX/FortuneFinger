@@ -22,6 +22,7 @@ type PoolLogic interface {
 	CreatePool(ctx context.Context, req *types.CreatePoolReq) error
 	UpdatePool(ctx context.Context, id uint64, req *types.UpdatePoolReq) error
 	DeletePool(ctx context.Context, id uint64) error
+	GetPoolOptions(ctx context.Context, req *types.GetPoolOptionsReq) (*types.GetPoolOptionsResp, error)
 }
 
 type poolLogic struct {
@@ -248,6 +249,24 @@ func (l *poolLogic) DeletePool(ctx context.Context, id uint64) error {
 		return err
 	}
 	return nil
+}
+
+func (l *poolLogic) GetPoolOptions(ctx context.Context, req *types.GetPoolOptionsReq) (*types.GetPoolOptionsResp, error) {
+	prizes, err := l.prizeRepo.ListOptions(ctx, req.OrgID)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]types.PoolOption, 0, len(prizes))
+	for _, prize := range prizes {
+		list = append(list, types.PoolOption{
+			ID:    prize.ID,
+			Name:  prize.Name,
+			Level: prize.Level,
+		})
+	}
+	resp := types.GetPoolOptionsResp{List: list}
+	return &resp, nil
 }
 
 func (l *poolLogic) validatePool(ctx context.Context, id uint64, req *types.PoolReq) error {

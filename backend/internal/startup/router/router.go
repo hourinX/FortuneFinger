@@ -7,6 +7,7 @@ import (
 	"fortunefinger/backend/internal/server/asset"
 	"fortunefinger/backend/internal/server/checkin"
 	"fortunefinger/backend/internal/server/core"
+	"fortunefinger/backend/internal/server/lottery"
 	"fortunefinger/backend/internal/server/prize"
 	"fortunefinger/backend/internal/server/socket"
 	"fortunefinger/backend/internal/server/user"
@@ -28,6 +29,7 @@ func New(svcCtx *svc.ServiceContext) *gin.Engine {
 	asset.Register(r, svcCtx)
 	checkin.Register(r, svcCtx)
 	core.Register(r, svcCtx)
+	lottery.Register(r, svcCtx)
 	prize.Register(r, svcCtx)
 	user.Register(r, svcCtx)
 	return r

@@ -95,3 +95,18 @@ func (h *PoolHandler) DeletePoolHandler(c *gin.Context) {
 	}
 	httpx.Ok(c, httpx.DeleteSuccess)
 }
+
+func (h *PoolHandler) GetPoolOptionsHandler(c *gin.Context) {
+	var req types.GetPoolOptionsReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		httpx.Error(c, errorx.Wrap(errorx.InvalidParameter, "奖品选项参数错误", err))
+		return
+	}
+
+	resp, err := h.logic.GetPoolOptions(c.Request.Context(), &req)
+	if err != nil {
+		httpx.Error(c, err)
+		return
+	}
+	httpx.Ok(c, httpx.QuerySuccess, resp)
+}

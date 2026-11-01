@@ -62,3 +62,18 @@ func (h *CheckinHandler) GetCheckinQRCodeHandler(c *gin.Context) {
 	}
 	httpx.Ok(c, httpx.QuerySuccess, resp)
 }
+
+func (h *CheckinHandler) CreateCheckinSessionHandler(c *gin.Context) {
+	var req types.CreateCheckinSessionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.Error(c, errorx.Wrap(errorx.InvalidParameter, "签到凭证参数错误", err))
+		return
+	}
+
+	resp, err := h.logic.CreateCheckinSession(c.Request.Context(), &req)
+	if err != nil {
+		httpx.Error(c, err)
+		return
+	}
+	httpx.Ok(c, httpx.CreateSuccess, resp)
+}

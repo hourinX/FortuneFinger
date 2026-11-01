@@ -11,6 +11,8 @@ var publicRoutes = map[string]struct{}{
 	http.MethodGet + " /api/checkin/template":          {},
 	http.MethodGet + " /api/checkin/state":             {},
 	http.MethodGet + " /api/checkin/qrcode":            {},
+	http.MethodPost + " /api/checkin/session":          {},
+	http.MethodGet + " /api/org/companies":             {},
 	http.MethodGet + " /api/ws":                        {},
 }
 

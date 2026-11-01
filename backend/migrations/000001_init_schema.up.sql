@@ -198,7 +198,6 @@ CREATE TABLE `fortune_storage` (
   KEY `idx_fortune_storage_scene_deleted_created` (`scene`, `deleted_at`, `created_at`),
   KEY `idx_fortune_storage_deleted_created` (`deleted_at`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='对象存储记录表';
-
 -- ---------- 奖品表 ----------
 CREATE TABLE `fortune_prize` (
   `id` bigint unsigned NOT NULL COMMENT '奖品ID',
@@ -237,3 +236,130 @@ CREATE TABLE `fortune_sys_config` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_fortune_sys_config_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='系统设置表';
+
+-- ---------- 抽奖活动表 ----------
+CREATE TABLE `fortune_activity` (
+  `id` bigint unsigned NOT NULL COMMENT '活动ID',
+  `code` char(8) NOT NULL COMMENT '活动编码',
+  `name` varchar(100) NOT NULL COMMENT '活动名称',
+  `org_id` bigint unsigned NOT NULL COMMENT '归属组织ID',
+  `venue` varchar(255) NOT NULL DEFAULT '' COMMENT '活动场地',
+  `activity_start_time` datetime(3) NOT NULL COMMENT '活动开始时间',
+  `activity_end_time` datetime(3) NOT NULL COMMENT '活动结束时间',
+  `checkin_start_time` datetime(3) NOT NULL COMMENT '签到开始时间',
+  `checkin_end_time` datetime(3) NOT NULL COMMENT '签到结束时间',
+  `checkin_template` varchar(50) NOT NULL DEFAULT 'invitation' COMMENT '签到模板',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '状态：1启用 2禁用',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '活动说明',
+  `created_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建人',
+  `updated_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新人',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  `deleted_at` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除标识：非0已删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_fortune_activity_code` (`code`),
+  KEY `idx_fortune_activity_org_deleted_status_start` (`org_id`, `deleted_at`, `status`, `activity_start_time`, `id`),
+  KEY `idx_fortune_activity_deleted_status_start` (`deleted_at`, `status`, `activity_start_time`, `id`),
+  CONSTRAINT `chk_fortune_activity_time` CHECK (`activity_end_time` > `activity_start_time`),
+  CONSTRAINT `chk_fortune_activity_checkin_time` CHECK (`checkin_end_time` > `checkin_start_time`),
+  CONSTRAINT `chk_fortune_activity_checkin_end` CHECK (`checkin_end_time` <= `activity_end_time`)
+) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='抽奖活动表';
+
+-- ---------- 抽奖轮次表 ----------
+CREATE TABLE `fortune_round` (
+  `id` bigint unsigned NOT NULL COMMENT '轮次ID',
+  `activity_id` bigint unsigned NOT NULL COMMENT '活动ID',
+  `prize_id` bigint unsigned NOT NULL COMMENT '奖品ID',
+  `name` varchar(100) NOT NULL COMMENT '轮次名称',
+  `draw_date` date NOT NULL COMMENT '开奖日期',
+  `draw_time` time NOT NULL COMMENT '开奖时间',
+  `winner_count` int unsigned NOT NULL DEFAULT 1 COMMENT '中奖人数',
+  `created_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建人',
+  `updated_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新人',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  `deleted_at` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除标识：非0已删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_fortune_round_activity_deleted_draw` (`activity_id`, `deleted_at`, `draw_date`, `draw_time`, `id`),
+  KEY `idx_fortune_round_prize_deleted_draw` (`prize_id`, `deleted_at`, `draw_date`, `draw_time`, `id`),
+  CONSTRAINT `chk_fortune_round_winner_count` CHECK (`winner_count` >= 1)
+) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='抽奖轮次表';
+
+-- ---------- 活动签到表 ----------
+CREATE TABLE `fortune_checkin` (
+  `id` bigint unsigned NOT NULL COMMENT '签到ID',
+  `activity_id` bigint unsigned NOT NULL COMMENT '活动ID',
+  `org_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '所属企业ID',
+  `roster_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '签到名单ID，0表示自由签到',
+  `name` varchar(100) NOT NULL COMMENT '参与者姓名',
+  `mobile` varchar(32) NOT NULL COMMENT '手机号码',
+  `email` varchar(254) NOT NULL DEFAULT '' COMMENT '电子邮箱',
+  `identity_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '身份摘要',
+  `avatar` bigint unsigned NOT NULL DEFAULT 0 COMMENT '头像存储ID',
+  `checked_in_at` datetime(3) NOT NULL COMMENT '签到时间',
+  `created_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建人',
+  `updated_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新人',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  `deleted_at` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除标识：非0已删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_fortune_checkin_activity_identity_deleted` (`activity_id`, `identity_hash`, `deleted_at`),
+  KEY `idx_fortune_checkin_activity_deleted_checked` (`activity_id`, `deleted_at`, `checked_in_at`, `id`),
+  KEY `idx_fortune_checkin_org_activity_deleted` (`org_id`, `activity_id`, `deleted_at`),
+  KEY `idx_fortune_checkin_roster_deleted` (`roster_id`, `deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='活动签到表';
+
+-- ---------- 签到指纹表 ----------
+CREATE TABLE `fortune_checkin_fingerprint` (
+  `id` bigint unsigned NOT NULL COMMENT '指纹记录ID',
+  `activity_id` bigint unsigned NOT NULL COMMENT '活动ID',
+  `checkin_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '签到ID，0表示尚未完成签到',
+  `identity_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '身份摘要',
+  `session_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '参与者会话摘要',
+  `browser_instance_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '浏览器实例摘要',
+  `fingerprint_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '综合设备指纹摘要',
+  `fingerprint_version` smallint unsigned NOT NULL DEFAULT 1 COMMENT '指纹算法版本',
+  `fingerprintjs_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT 'FingerprintJS摘要',
+  `canvas_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT 'Canvas特征摘要',
+  `webgl_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT 'WebGL特征摘要',
+  `audio_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT 'AudioContext特征摘要',
+  `screen_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '屏幕特征摘要',
+  `user_agent_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '用户代理摘要',
+  `client_hints_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '客户端提示摘要',
+  `languages_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '语言列表摘要',
+  `screen_width` int unsigned NOT NULL DEFAULT 0 COMMENT '屏幕宽度',
+  `screen_height` int unsigned NOT NULL DEFAULT 0 COMMENT '屏幕高度',
+  `avail_width` int unsigned NOT NULL DEFAULT 0 COMMENT '屏幕可用宽度',
+  `avail_height` int unsigned NOT NULL DEFAULT 0 COMMENT '屏幕可用高度',
+  `device_pixel_ratio` decimal(6,3) unsigned NOT NULL DEFAULT 0 COMMENT '设备像素比',
+  `color_depth` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '颜色深度',
+  `timezone` varchar(64) NOT NULL DEFAULT '' COMMENT '浏览器时区',
+  `platform` varchar(64) NOT NULL DEFAULT '' COMMENT '设备平台',
+  `browser` varchar(64) NOT NULL DEFAULT '' COMMENT '浏览器类型',
+  `hardware_concurrency` smallint unsigned NOT NULL DEFAULT 0 COMMENT '逻辑处理器数量',
+  `device_memory` decimal(6,2) unsigned NOT NULL DEFAULT 0 COMMENT '设备内存档位',
+  `max_touch_points` smallint unsigned NOT NULL DEFAULT 0 COMMENT '最大触控点数量',
+  `touch_supported` tinyint unsigned NOT NULL DEFAULT 2 COMMENT '触控支持：1是 2否',
+  `ip_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT '请求IP摘要',
+  `components` json NOT NULL COMMENT '其他指纹分项摘要',
+  `confidence` decimal(5,4) unsigned NOT NULL DEFAULT 0 COMMENT '指纹置信度',
+  `similarity_score` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '设备相似度',
+  `risk_reason` varchar(500) NOT NULL DEFAULT '' COMMENT '风险原因',
+  `decision` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '处理结果：0待判断 1通过 2待验证 3拒绝 4验证通过',
+  `created_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '创建人',
+  `updated_by` bigint unsigned NOT NULL DEFAULT 0 COMMENT '更新人',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  `deleted_at` bigint unsigned NOT NULL DEFAULT 0 COMMENT '删除标识：非0已删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_fortune_checkin_fp_activity_browser_deleted` (`activity_id`, `browser_instance_hash`, `deleted_at`),
+  KEY `idx_fortune_checkin_fp_activity_fingerprint_deleted` (`activity_id`, `fingerprint_hash`, `deleted_at`),
+  KEY `idx_fortune_checkin_fp_activity_visitor_deleted` (`activity_id`, `fingerprintjs_hash`, `deleted_at`),
+  KEY `idx_fortune_checkin_fp_activity_identity_deleted` (`activity_id`, `identity_hash`, `deleted_at`),
+  KEY `idx_fortune_checkin_fp_activity_session_deleted` (`activity_id`, `session_hash`, `deleted_at`),
+  KEY `idx_fortune_checkin_fp_checkin_deleted` (`checkin_id`, `deleted_at`),
+  KEY `idx_fortune_checkin_fp_activity_decision_created` (`activity_id`, `decision`, `deleted_at`, `created_at`),
+  CONSTRAINT `chk_fortune_checkin_fingerprint_confidence` CHECK (`confidence` <= 1),
+  CONSTRAINT `chk_fortune_checkin_fingerprint_similarity` CHECK (`similarity_score` <= 100),
+  CONSTRAINT `chk_fortune_checkin_fingerprint_decision` CHECK (`decision` <= 4)
+) ENGINE=InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC COMMENT='签到指纹表';
