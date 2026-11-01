@@ -47,6 +47,7 @@ import {
   CloudUploadOutlined,
   ExclamationCircleOutlined,
   MailOutlined,
+  PlayCircleOutlined,
   QrcodeOutlined,
   SettingOutlined,
   TrophyOutlined,
@@ -55,8 +56,8 @@ import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConfig, saveConfig, sendTestMail } from '@/api/config'
 import { useAppStore } from '@/store'
-import { DAY_MILLISECONDS, getDateTimeDifference } from '@/utils/datetime'
 import BasicSettings from './components/basic.vue'
+import LotteryProcessSettings from './components/lottery-process.vue'
 import LotteryRuleSettings from './components/lottery-rule.vue'
 import MailSettings from './components/mail.vue'
 import SettingsNav from './components/settings-nav.vue'
@@ -79,6 +80,14 @@ const sections = [
     permission: 'system:config:info',
     icon: TrophyOutlined,
     component: LotteryRuleSettings,
+  },
+  {
+    code: 'lottery-process',
+    label: '抽奖流程',
+    desc: '设置抽奖轮次的默认触发方式、现场操作和结果揭晓流程',
+    permission: 'system:config:info',
+    icon: PlayCircleOutlined,
+    component: LotteryProcessSettings,
   },
   {
     code: 'sign',
@@ -133,19 +142,23 @@ const initialSettings = {
     excludeWinners: true,
     overflowMode: 'random',
   },
+  'lottery-process': {
+    trigger_mode: 'manual',
+    trigger_interaction: 'hold',
+    hold_duration: 3,
+    warmup_duration: 5,
+    allow_early: false,
+    reveal_mode: 'batch',
+    auto_failure_mode: 'manual',
+  },
   sign: {
     mode: 1,
-    checkin_start_time: '',
-    checkin_end_time: '',
     requireName: true,
     requireCompany: true,
     allowAvatar: true,
     duplicateMode: 'show',
     enterPhotoWall: true,
     photoWallNameMode: 'name_company',
-    screen: {
-      template: 'invitation',
-    },
   },
   upload: {
     imageMaxSize: 10,
@@ -225,6 +238,10 @@ async function loadConfig(code) {
       ...structuredClone(initialSettings[code]),
       ...structuredClone(resp.config),
     }
+    if (code === 'sign') {
+      delete config.checkin_start_time
+      delete config.checkin_end_time
+    }
     settings[code] = config
   } catch (error) {
     if (sequence === requestSequence) message.error(error.message || '加载系统配置失败')
@@ -235,30 +252,15 @@ async function loadConfig(code) {
 
 async function saveCurrent() {
   const code = activeSection.value
-  if (code === 'sign') {
-    const sign = settings.sign
-    if (!sign.checkin_start_time || !sign.checkin_end_time) {
-      message.warning('请选择允许开始签到时间和签到截止时间')
-      return
-    }
-    const difference = getDateTimeDifference(sign.checkin_start_time, sign.checkin_end_time)
-    if (!Number.isFinite(difference)) {
-      message.warning('签到时间格式无效，请重新选择')
-      return
-    }
-    if (difference <= 0) {
-      message.warning('签到截止时间必须晚于允许开始签到时间')
-      return
-    }
-    if (difference > 7 * DAY_MILLISECONDS) {
-      message.warning('签到开放时长不能超过 7 天')
-      return
-    }
-  }
   saving.value = true
   try {
     const config = structuredClone(toRaw(settings[code]))
     if (code === 'mail') delete config.testEmail
+    if (code === 'sign') {
+      delete config.screen
+      delete config.checkin_start_time
+      delete config.checkin_end_time
+    }
     const resp = await saveConfig({
       id: configIDs[code],
       code,

@@ -24,7 +24,6 @@ export function useCheckin(source: Reactive<CheckinSource>) {
   const refreshing = ref(false)
   const refreshVersion = ref(0)
   let clock: ReturnType<typeof setInterval> | undefined
-  let feedback: ReturnType<typeof setTimeout> | undefined
 
   const remaining = computed(() => Math.max(0, Math.ceil((source.deadline - now.value) / 1000)))
   const closed = computed(() => source.status === 'ended' || remaining.value === 0)
@@ -112,11 +111,6 @@ export function useCheckin(source: Reactive<CheckinSource>) {
     if (now.value >= nextRefresh.value) {
       nextRefresh.value = now.value + refreshPeriod
       refreshVersion.value += 1
-      refreshing.value = true
-      clearTimeout(feedback)
-      feedback = setTimeout(() => {
-        refreshing.value = false
-      }, 900)
     }
   }
 
@@ -125,7 +119,6 @@ export function useCheckin(source: Reactive<CheckinSource>) {
   })
   onUnmounted(() => {
     clearInterval(clock)
-    clearTimeout(feedback)
   })
 
   return { qr, attendance, deadline, setAttendance, setQRCode, simulateArrival }

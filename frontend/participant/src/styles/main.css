@@ -1,0 +1,14 @@
+:root {
+  color: #29262c;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+html, body, #app { min-width: 320px; min-height: 100%; margin: 0; }
+body { min-height: 100dvh; }
+button, input, select, textarea { font-family: inherit; }
+input, select, textarea { font-size: 16px; }
+button { touch-action: manipulation; }

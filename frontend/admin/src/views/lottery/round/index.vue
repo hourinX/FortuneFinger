@@ -2,27 +2,19 @@
   <section class="round-page">
     <a-form class="round-toolbar" layout="inline" :model="query" @finish="search">
       <a-form-item>
-        <a-input v-model:value="query.keyword" allow-clear placeholder="轮次或奖项名称">
-          <template #prefix><search-outlined /></template>
-        </a-input>
-      </a-form-item>
-      <a-form-item>
         <a-select
-          v-model:value="query.activity"
+          v-model:value="query.activityId"
           allow-clear
           placeholder="所属活动"
           :options="activityOptions"
         />
       </a-form-item>
       <a-form-item>
-        <a-input v-model:value="query.date" type="date" />
-      </a-form-item>
-      <a-form-item>
         <a-select
           v-model:value="query.status"
           allow-clear
           placeholder="轮次状态"
-          :options="statusOptions"
+          :options="roundStatusOptions"
         />
       </a-form-item>
       <a-form-item>
@@ -36,217 +28,187 @@
       </a-form-item>
     </a-form>
 
-    <div class="schedule-summary">
-      <div>
-        <calendar-outlined />
-        <span>共安排 <strong>{{ filteredRows.length }}</strong> 个抽奖轮次</span>
-      </div>
-      <span>所有轮次均使用完整日期和时间，不跨日复用时间</span>
-    </div>
-
-    <a-empty v-if="!groupedRows.length" description="暂无符合条件的抽奖轮次" />
-    <section v-for="group in groupedRows" :key="group.date" class="schedule-group">
-      <header class="schedule-group__header">
-        <div class="schedule-date">
-          <strong>{{ dateParts(group.date).day }}</strong>
-          <span>{{ dateParts(group.date).yearMonth }}</span>
-        </div>
-        <div>
-          <strong>{{ dateParts(group.date).weekday }}</strong>
-          <span>{{ group.rows.length }} 个轮次</span>
-        </div>
-      </header>
-
-      <div class="round-list">
-        <article v-for="item in group.rows" :key="item.id" class="round-card">
-          <div class="round-time">
-            <strong>{{ item.time.slice(0, 5) }}</strong>
-            <span>{{ item.time.slice(5) || ':00' }}</span>
-          </div>
-          <div class="round-sequence">
-            <span>{{ String(item.sequence).padStart(2, '0') }}</span>
-          </div>
-          <div class="round-main">
-            <div class="round-title">
-              <strong>{{ item.name }}</strong>
-              <a-tag :color="statusMeta[item.status].color">
-                {{ statusMeta[item.status].label }}
-              </a-tag>
-              <a-tag v-if="item.autoStart" color="blue">自动开始</a-tag>
-            </div>
-            <span>{{ item.activity }}</span>
-          </div>
-          <div class="round-detail">
-            <span>奖项</span>
-            <strong>{{ item.prize }}</strong>
-          </div>
-          <div class="round-detail round-detail--count">
-            <span>本轮名额</span>
-            <strong>{{ item.winnerCount }} 人</strong>
-          </div>
-          <div class="round-detail round-detail--template">
-            <span>大屏效果</span>
-            <strong>{{ item.template }}</strong>
-          </div>
-          <a-space class="round-actions" :size="14">
-            <a @click="openEdit(item)"><edit-outlined />编辑</a>
-            <a class="danger-link" @click="removeRound(item)"><delete-outlined />删除</a>
-          </a-space>
-        </article>
-      </div>
-    </section>
-
-    <a-modal
-      v-model:open="formVisible"
-      :title="editingId ? '编辑抽奖轮次' : '新增抽奖轮次'"
-      width="680px"
-      ok-text="确定"
-      cancel-text="取消"
-      @ok="saveRound"
+    <a-table
+      class="round-table"
+      :columns="columns"
+      :data-source="tableRows"
+      :pagination="pagination"
+      :loading="tableLoading"
+      row-key="id"
+      :scroll="{ x: 1305 }"
+      :custom-row="customRow"
+      @change="changeTable"
     >
-      <a-form class="round-form" layout="vertical" :model="form">
-        <div class="round-form__grid">
-          <a-form-item label="所属活动" required>
-            <a-select v-model:value="form.activity" :options="activityOptions" />
-          </a-form-item>
-          <a-form-item label="轮次名称" required>
-            <a-input v-model:value="form.name" placeholder="例如：第一轮抽奖" />
-          </a-form-item>
-          <a-form-item label="开奖日期" required>
-            <a-input v-model:value="form.date" type="date" />
-          </a-form-item>
-          <a-form-item label="开奖时间" required>
-            <a-input v-model:value="form.time" type="time" step="1" />
-          </a-form-item>
-          <a-form-item label="奖项" required>
-            <a-input v-model:value="form.prize" placeholder="请选择或输入奖项" />
-          </a-form-item>
-          <a-form-item label="本轮中奖人数" required>
-            <a-input-number v-model:value="form.winnerCount" :min="1" :max="999" />
-          </a-form-item>
-          <a-form-item label="大屏效果" required>
-            <a-select v-model:value="form.template" :options="templateOptions" />
-          </a-form-item>
-          <a-form-item label="到点自动开始">
-            <a-switch v-model:checked="form.autoStart" />
-            <span class="switch-description">开启后按照设定日期和时间自动进入本轮抽奖</span>
-          </a-form-item>
-        </div>
-      </a-form>
-    </a-modal>
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'activity'">
+          <div class="activity-identity">
+            <div class="activity-identity__content">
+              <strong>{{ record.activityName }}</strong>
+              <span class="activity-identity__date">
+                <calendar-outlined />{{ record.activityDateRange }}
+              </span>
+              <small>{{ record.activityRoundCount }} 个抽奖轮次</small>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="column.key === 'drawDate'">
+          <div class="draw-time">
+            <strong>{{ dateParts(record.date).day }}</strong>
+            <div>
+              <span>{{ dateParts(record.date).yearMonth }}</span>
+              <small>{{ dateParts(record.date).weekday }}</small>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="column.key === 'clock'">
+          <strong class="clock-cell">{{ record.time.slice(0, 5) }}</strong>
+        </template>
+        <template v-else-if="column.key === 'round'">
+          <div class="round-identity">
+            <span>{{ String(record.sequence).padStart(2, '0') }}</span>
+            <strong>{{ record.name }}</strong>
+          </div>
+        </template>
+        <template v-else-if="column.key === 'prize'">
+          <div class="prize-cell">
+            <a-tag :style="prizeLevelTagStyle(record.level)">
+              {{ prizeLevelOptionMap.get(record.level)?.label || record.level }}
+            </a-tag>
+            <strong>{{ record.prizeName }}</strong>
+          </div>
+        </template>
+        <template v-else-if="column.key === 'winnerCount'">
+          <strong class="winner-count">{{ record.winnerCount }} 人</strong>
+        </template>
+        <template v-else-if="column.key === 'status'">
+          <a-tag :style="roundStatusTagStyle(record.status)">
+            {{ roundStatusOptionMap.get(record.status)?.label || record.status }}
+          </a-tag>
+        </template>
+        <template v-else-if="column.key === 'action'">
+          <a-space :size="12">
+            <a @click="openEdit(record)"><edit-outlined />编辑</a>
+            <a class="danger-link" @click="removeRound(record)"> <delete-outlined />删除 </a>
+          </a-space>
+        </template>
+      </template>
+      <template #emptyText><a-empty description="暂无抽奖轮次" /></template>
+    </a-table>
+
+    <RoundForm ref="formRef" :activities="activityOptions" @success="loadRounds" />
   </section>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import {
-  CalendarOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-  SearchOutlined,
-} from '@ant-design/icons-vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { CalendarOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons-vue'
 import { Modal, message } from 'ant-design-vue'
+import { useDictionaryOptions } from '@/hooks/useDictionary'
+import { dictionaryTagStyleByCode } from '@/utils/dictionary-tag'
+import { deleteRound, getActivityList, getRoundList } from '@/api/lottery'
+import RoundForm from './components/form.vue'
 
-const activityOptions = [
-  { label: '2026 FortuneFinger 年会', value: '2026 FortuneFinger 年会' },
-  { label: '2027 新年庆典', value: '2027 新年庆典' },
-]
-const statusOptions = [
-  { label: '待开始', value: 'pending' },
-  { label: '进行中', value: 'drawing' },
-  { label: '已结束', value: 'finished' },
-]
-const templateOptions = [
-  { label: '透明球机', value: '透明球机' },
-  { label: '金色礼签', value: '金色礼签' },
-]
-const statusMeta = {
-  pending: { label: '待开始', color: 'default' },
-  drawing: { label: '进行中', color: 'processing' },
-  finished: { label: '已结束', color: 'success' },
-}
-const initialRows = [
-  {
-    id: '1',
-    sequence: 1,
-    activity: '2026 FortuneFinger 年会',
-    name: '第一轮抽奖',
-    date: '2026-12-31',
-    time: '18:30:00',
-    prize: '三等奖 · 智能手环',
-    winnerCount: 20,
-    template: '金色礼签',
-    autoStart: true,
-    status: 'pending',
-  },
-  {
-    id: '2',
-    sequence: 2,
-    activity: '2026 FortuneFinger 年会',
-    name: '第二轮抽奖',
-    date: '2026-12-31',
-    time: '19:20:00',
-    prize: '二等奖 · 平板电脑',
-    winnerCount: 6,
-    template: '金色礼签',
-    autoStart: true,
-    status: 'pending',
-  },
-  {
-    id: '3',
-    sequence: 3,
-    activity: '2026 FortuneFinger 年会',
-    name: '跨年特别轮',
-    date: '2027-01-01',
-    time: '00:05:00',
-    prize: '一等奖 · 智能科技礼盒',
-    winnerCount: 3,
-    template: '透明球机',
-    autoStart: true,
-    status: 'pending',
-  },
-]
-
-const query = reactive({ keyword: '', activity: undefined, date: '', status: undefined })
-const activeQuery = reactive({ ...query })
-const rows = ref(initialRows)
-const formVisible = ref(false)
-const editingId = ref()
-const form = reactive(initialForm())
-const filteredRows = computed(() =>
-  rows.value.filter((item) => {
-    const keyword = activeQuery.keyword.toLocaleLowerCase()
-    return (
-      (!keyword || `${item.name}${item.prize}`.toLocaleLowerCase().includes(keyword)) &&
-      (!activeQuery.activity || item.activity === activeQuery.activity) &&
-      (!activeQuery.date || item.date === activeQuery.date) &&
-      (!activeQuery.status || item.status === activeQuery.status)
-    )
-  }),
+const activityOptions = ref([])
+const roundStatusOptions = useDictionaryOptions('activities_status')
+const roundStatusOptionMap = computed(
+  () => new Map(roundStatusOptions.value.map((option) => [option.value, option])),
 )
-const groupedRows = computed(() => {
-  const groups = new Map()
-  filteredRows.value
-    .slice()
-    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
-    .forEach((item) => {
-      if (!groups.has(item.date)) groups.set(item.date, [])
-      groups.get(item.date).push(item)
-    })
-  return [...groups].map(([date, groupRows]) => ({ date, rows: groupRows }))
+function roundStatusTagStyle(status) {
+  return dictionaryTagStyleByCode('activities_status', roundStatusOptionMap.value.get(status))
+}
+const prizeLevelOptions = useDictionaryOptions('prize_level')
+const prizeLevelOptionMap = computed(
+  () => new Map(prizeLevelOptions.value.map((option) => [option.value, option])),
+)
+function prizeLevelTagStyle(level) {
+  return dictionaryTagStyleByCode('prize_level', prizeLevelOptionMap.value.get(level))
+}
+const columns = [
+  {
+    title: '活动信息',
+    key: 'activity',
+    width: 280,
+    customCell: (record) => ({
+      rowSpan: record.activityRowSpan,
+      class: record.activityPageEnd ? 'activity-column activity-page-end' : 'activity-column',
+    }),
+  },
+  {
+    title: '开奖日期',
+    key: 'drawDate',
+    width: 135,
+    customCell: (record) => ({ rowSpan: record.dateRowSpan, class: 'draw-date-column' }),
+  },
+  { title: '开奖时间', key: 'clock', width: 95 },
+  { title: '轮次信息', key: 'round', width: 220 },
+  { title: '奖项与奖品', key: 'prize', width: 260 },
+  { title: '本轮名额', key: 'winnerCount', width: 105 },
+  { title: '状态', key: 'status', width: 90 },
+  { title: '操作', key: 'action', width: 150, fixed: 'right' },
+]
+const query = reactive({ activityId: undefined, status: undefined })
+const rows = ref([])
+const page = reactive({ current: 1, pageSize: 10, total: 0 })
+const tableLoading = ref(false)
+const formRef = ref()
+const pagination = computed(() => ({
+  current: page.current,
+  pageSize: page.pageSize,
+  total: page.total,
+  showSizeChanger: true,
+  showTotal: (total) => `共 ${total} 条`,
+}))
+const tableRows = computed(() => {
+  const activities = new Map()
+  rows.value.forEach((item) => {
+    if (!activities.has(item.activityId)) activities.set(item.activityId, [])
+    activities.get(item.activityId).push(item)
+  })
+  const result = [...activities.values()].flatMap((activityRows) =>
+    activityRows.slice().sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
+  )
+  const activityCounts = new Map()
+  rows.value.forEach((item) => {
+    activityCounts.set(item.activityId, (activityCounts.get(item.activityId) || 0) + 1)
+  })
+  const mappedRows = result.map((item, index) => {
+    const activity = activityOptions.value.find((option) => option.value === item.activityId)
+    return {
+      ...item,
+      activityDateRange:
+        item.activityDateRange ||
+        (activity ? `${activity.startDate} — ${activity.endDate}` : item.date),
+      activityRoundCount: item.activityRoundCount ?? activityCounts.get(item.activityId),
+      activityRowSpan: 1,
+      dateRowSpan: 1,
+      activityPageEnd: false,
+      activityGroupStart: index > 0 && result[index - 1].activityId !== item.activityId,
+    }
+  })
+  for (let start = 0; start < mappedRows.length; start += page.pageSize) {
+    const pageRows = mappedRows.slice(start, start + page.pageSize)
+    setRowSpan(pageRows, 'activityRowSpan', (left, right) => left.activityId === right.activityId)
+    setRowSpan(
+      pageRows,
+      'dateRowSpan',
+      (left, right) => left.activityId === right.activityId && left.date === right.date,
+    )
+    let lastActivityStart = pageRows.length - 1
+    while (lastActivityStart >= 0 && pageRows[lastActivityStart].activityRowSpan === 0) {
+      lastActivityStart -= 1
+    }
+    if (lastActivityStart >= 0) pageRows[lastActivityStart].activityPageEnd = true
+  }
+  return mappedRows
 })
 
-function initialForm() {
-  return {
-    activity: activityOptions[0].value,
-    name: '',
-    date: '',
-    time: '18:30:00',
-    prize: '',
-    winnerCount: 1,
-    template: templateOptions[0].value,
-    autoStart: true,
+function setRowSpan(list, field, matches) {
+  for (let start = 0; start < list.length;) {
+    let end = start + 1
+    while (end < list.length && matches(list[start], list[end])) end += 1
+    list[start][field] = end - start
+    for (let index = start + 1; index < end; index += 1) list[index][field] = 0
+    start = end
   }
 }
 
@@ -259,46 +221,33 @@ function dateParts(date) {
   }
 }
 
-function search() {
-  Object.assign(activeQuery, query)
+async function search() {
+  page.current = 1
+  await loadRounds()
 }
 
-function reset() {
-  Object.assign(query, { keyword: '', activity: undefined, date: '', status: undefined })
-  search()
+async function reset() {
+  Object.assign(query, { activityId: undefined, status: undefined })
+  page.current = 1
+  await loadRounds()
+}
+
+async function changeTable(paginationState) {
+  page.current = paginationState.current
+  page.pageSize = paginationState.pageSize
+  await loadRounds()
+}
+
+function customRow(record) {
+  return { class: record.activityGroupStart ? 'activity-group-start' : '' }
 }
 
 function openCreate() {
-  editingId.value = undefined
-  Object.assign(form, initialForm())
-  formVisible.value = true
+  formRef.value?.openCreate()
 }
 
 function openEdit(item) {
-  editingId.value = item.id
-  Object.assign(form, item)
-  formVisible.value = true
-}
-
-function saveRound() {
-  if (!form.name || !form.date || !form.time || !form.prize) {
-    message.warning('请填写完整的轮次信息')
-    return
-  }
-  if (editingId.value) {
-    rows.value = rows.value.map((item) =>
-      item.id === editingId.value ? { ...item, ...form } : item,
-    )
-  } else {
-    rows.value.push({
-      ...form,
-      id: String(Date.now()),
-      sequence: rows.value.length + 1,
-      status: 'pending',
-    })
-  }
-  formVisible.value = false
-  message.success(editingId.value ? '轮次修改成功' : '轮次新增成功')
+  formRef.value?.openEdit(item.id)
 }
 
 function removeRound(item) {
@@ -308,12 +257,74 @@ function removeRound(item) {
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
-    onOk() {
-      rows.value = rows.value.filter((row) => row.id !== item.id)
+    async onOk() {
+      await deleteRound(item.id)
       message.success('轮次删除成功')
+      await loadRounds()
     },
   })
 }
+
+async function loadRounds() {
+  tableLoading.value = true
+  try {
+    const resp = await getRoundList({
+      page: page.current,
+      pageSize: page.pageSize,
+      activity_id: query.activityId,
+      phase: query.status,
+    })
+    rows.value = flattenRoundActivities(resp?.list || [])
+    page.total = resp?.total || 0
+  } catch (error) {
+    message.error(error.message)
+  } finally {
+    tableLoading.value = false
+  }
+}
+
+async function loadActivityOptions() {
+  try {
+    const resp = await getActivityList({ page: 1, pageSize: 100, status: 1 })
+    activityOptions.value = (resp.list || []).map((item) => ({
+      label: item.name,
+      value: item.id,
+      orgId: item.org_id,
+      startDate: item.activity_start_time.slice(0, 10),
+      endDate: item.activity_end_time.slice(0, 10),
+    }))
+  } catch (error) {
+    message.error(error.message)
+  }
+}
+
+function flattenRoundActivities(activities) {
+  return activities.flatMap((activity) =>
+    (activity.dates || []).flatMap((date) =>
+      (date.rounds || []).map((round) => ({
+        id: round.id,
+        sequence: round.sequence,
+        activityId: activity.activity_id,
+        activityName: activity.activity_name,
+        activityDateRange: `${activity.activity_start_time.slice(0, 10)} — ${activity.activity_end_time.slice(0, 10)}`,
+        activityRoundCount: activity.round_count,
+        name: round.name,
+        date: date.draw_date,
+        time: round.draw_time,
+        level: round.level,
+        prizeId: round.prize_id,
+        prizeName: round.prize_name,
+        winnerCount: round.winner_count,
+        status: round.phase,
+      })),
+    ),
+  )
+}
+
+onMounted(() => {
+  loadActivityOptions()
+  loadRounds()
+})
 </script>
 
 <style scoped lang="less">
@@ -345,178 +356,40 @@ function removeRound(item) {
   margin-left: auto !important;
 }
 
-.schedule-summary {
-  display: flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-  padding: 0 14px;
-  color: #777;
-  font-size: 13px;
-  background: #fafafa;
-  border: 1px solid #eeeeee;
-  border-radius: 6px;
-
-  > div {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    color: #4a4a4a;
-  }
-
-  strong {
-    color: var(--color-primary);
-  }
-}
-
-.schedule-group {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  border-top: 1px solid #ededed;
-}
-
-.schedule-group:last-of-type {
-  border-bottom: 1px solid #ededed;
-}
-
-.schedule-group__header {
-  padding: 20px 18px 20px 6px;
-  border-right: 1px solid #ededed;
-
-  > div:last-child {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 12px;
-    color: #4f4f4f;
-
-    span {
-      color: #999;
-      font-size: 12px;
-    }
-  }
-}
-
-.schedule-date {
-  display: flex;
-  align-items: flex-end;
-  gap: 7px;
-
-  strong {
-    color: #292929;
-    font-size: 30px;
+.round-table {
+  :deep(.ant-table-thead > tr > th) {
+    height: 48px;
+    padding: 0 16px;
+    color: #494949;
+    font-size: 13px;
     font-weight: 600;
-    line-height: 1;
-  }
-
-  span {
-    color: #999;
-    font-size: 11px;
-  }
-}
-
-.round-list {
-  min-width: 0;
-}
-
-.round-card {
-  display: grid;
-  min-height: 88px;
-  grid-template-columns: 82px 38px minmax(180px, 1.2fr) minmax(170px, 1fr) 100px 130px 130px;
-  align-items: center;
-  padding: 12px 16px 12px 20px;
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 160ms ease;
-
-  &:last-child {
-    border-bottom: 0;
-  }
-
-  &:hover {
     background: #fafafa;
   }
-}
 
-.round-time {
-  display: flex;
-  align-items: baseline;
-  color: #2f2f2f;
-
-  strong {
-    font-size: 19px;
-    font-weight: 600;
+  :deep(.ant-table-tbody > tr > td) {
+    height: 76px;
+    padding: 10px 16px;
   }
 
-  span {
-    color: #aaa;
-    font-size: 11px;
-  }
-}
-
-.round-sequence {
-  position: relative;
-  display: flex;
-  width: 24px;
-  height: 24px;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  font-size: 11px;
-  background: #f3f3f3;
-  border-radius: 50%;
-}
-
-.round-main,
-.round-detail {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 5px;
-
-  > span {
-    overflow: hidden;
-    color: #999;
-    font-size: 12px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  :deep(.ant-table-tbody .activity-column) {
+    border-right: 1px solid #ededed !important;
   }
 
-  > strong {
-    overflow: hidden;
-    color: #444;
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  :deep(.ant-table-tbody .draw-date-column) {
+    border-right: 1px solid #ededed !important;
   }
-}
 
-.round-title {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
+  :deep(.ant-table-tbody .activity-page-end) {
+    border-bottom: 1px solid #f0f0f0 !important;
+  }
 
-  strong {
-    overflow: hidden;
-    color: #2f2f2f;
-    font-size: 15px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  :deep(.ant-table-tbody > tr.activity-group-start > td) {
+    border-top: 2px solid #e6e6e6 !important;
   }
 
   :deep(.ant-tag) {
     margin: 0;
   }
-}
-
-.round-detail--count strong {
-  color: var(--color-primary);
-}
-
-.round-actions {
-  justify-self: end;
 
   a {
     color: #1677ff;
@@ -531,34 +404,153 @@ function removeRound(item) {
   }
 }
 
-.round-form {
-  padding-top: 12px;
-}
+.activity-identity {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  padding-left: 14px;
 
-.round-form__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 20px;
-
-  :deep(.ant-input-number),
-  :deep(.ant-select) {
-    width: 100%;
+  &::before {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #e95a52 0%, #cf3f36 100%);
+    border-radius: 3px;
+    content: '';
   }
 }
 
-.switch-description {
-  margin-left: 10px;
-  color: #999;
-  font-size: 12px;
+.activity-identity__content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+
+  strong,
+  span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  strong {
+    color: #303030;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 21px;
+  }
+
+  span {
+    color: #999;
+    font-size: 11px;
+  }
+
+  small {
+    width: fit-content;
+    padding: 2px 8px;
+    color: #c94a43;
+    font-size: 10px;
+    line-height: 17px;
+    background: #fff1ef;
+    border-radius: 10px;
+  }
 }
 
-@media (max-width: 1280px) {
-  .round-card {
-    grid-template-columns: 75px 34px minmax(170px, 1fr) minmax(150px, 1fr) 90px 120px;
+.activity-identity__date {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.round-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+
+  > span {
+    display: inline-flex;
+    width: 25px;
+    height: 25px;
+    flex: 0 0 25px;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-size: 10px;
+    background: #f3f3f3;
+    border-radius: 50%;
   }
 
-  .round-detail--template {
-    display: none;
+  strong {
+    overflow: hidden;
+    color: #303030;
+    font-size: 14px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
+}
+
+.draw-time {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  > strong {
+    color: #303030;
+    font-size: 25px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    white-space: nowrap;
+
+    span {
+      color: #666;
+      font-size: 11px;
+    }
+
+    small {
+      color: #999;
+      font-size: 10px;
+    }
+  }
+}
+
+.prize-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+
+  :deep(.ant-tag) {
+    flex: 0 0 auto;
+  }
+
+  strong {
+    overflow: hidden;
+    color: #3f3f3f;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.clock-cell {
+  color: #464646;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.winner-count {
+  color: var(--color-primary);
+  font-weight: 500;
 }
 </style>

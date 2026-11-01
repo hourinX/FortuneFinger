@@ -8,7 +8,7 @@ const router = createRouter({
       redirect: '/checkin',
     },
     {
-      path: '/checkin/:eventId?',
+      path: '/checkin',
       name: 'checkin-screen',
       component: () => import('@/views/checkin/index.vue'),
       meta: { title: '签到大屏' },

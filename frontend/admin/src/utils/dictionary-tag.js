@@ -20,6 +20,11 @@ const dictionaryTagPalettes = {
     third: { color: '#0F9F78', background: '#EAFBF3', border: '#B8E8D3' },
     participation: { color: '#64748B', background: '#F1F5F9', border: '#DCE3EB' },
   },
+  activities_status: {
+    pending: { color: '#D97706', background: '#FFF7E6', border: '#FFD591' },
+    active: { color: '#E53935', background: '#FFF1F0', border: '#FFA39E' },
+    finished: { color: '#16A34A', background: '#F0FDF4', border: '#BBF7D0' },
+  },
 }
 
 export function dictionaryTagStyle(option, styles = {}) {

@@ -3,7 +3,12 @@
     <div class="settings-group">
       <div class="settings-group__title">01 · 签到模式</div>
       <a-radio-group v-model:value="model.mode" class="sign-mode">
-        <a-radio v-for="option in modeOptions" :key="option.value" :value="option.value" class="sign-mode__item">
+        <a-radio
+          v-for="option in modeOptions"
+          :key="option.value"
+          :value="option.value"
+          class="sign-mode__item"
+        >
           <span class="sign-mode__content">
             <span class="sign-mode__name">{{ option.label }}</span>
             <span class="sign-mode__description">{{ modeDescriptions[option.value] }}</span>
@@ -13,33 +18,11 @@
     </div>
 
     <div class="settings-group">
-      <div class="settings-group__title">02 · 签到时间</div>
-      <SettingRow title="允许开始签到时间" description="到达该时间后，大屏开始展示签到二维码并允许参与者签到">
-        <a-date-picker
-          v-model:value="model.checkin_start_time"
-          class="settings-control"
-          show-time
-          :format="dateTimeFormat"
-          :value-format="dateTimeFormat"
-          placeholder="请选择开始时间"
-        />
-      </SettingRow>
-      <SettingRow title="签到截止时间" description="到达该时间后关闭签到入口；签到开放时长最多为 7 天">
-        <a-date-picker
-          v-model:value="model.checkin_end_time"
-          class="settings-control"
-          show-time
-          :format="dateTimeFormat"
-          :value-format="dateTimeFormat"
-          placeholder="请选择截止时间"
-        />
-      </SettingRow>
-      <p v-if="timeError" class="sign-time-error">{{ timeError }}</p>
-    </div>
-
-    <div class="settings-group">
-      <div class="settings-group__title">03 · 签到信息</div>
-      <SettingRow title="要求填写真实姓名" description="用于签到名单展示和人员匹配；名单模式下必须开启">
+      <div class="settings-group__title">02 · 签到信息</div>
+      <SettingRow
+        title="要求填写真实姓名"
+        description="用于签到名单展示和人员匹配；名单模式下必须开启"
+      >
         <a-switch v-model:checked="model.requireName" :disabled="model.mode === 2" />
       </SettingRow>
       <SettingRow title="要求选择所属公司" description="支持集团年会、多家子公司或联合活动">
@@ -51,9 +34,13 @@
     </div>
 
     <div class="settings-group">
-      <div class="settings-group__title">04 · 签到行为</div>
+      <div class="settings-group__title">03 · 签到行为</div>
       <SettingRow title="重复签到处理" description="系统识别到同一参与者再次扫码时的处理方式">
-        <a-select v-model:value="model.duplicateMode" class="settings-control" :options="duplicateOptions" />
+        <a-select
+          v-model:value="model.duplicateMode"
+          class="settings-control"
+          :options="duplicateOptions"
+        />
       </SettingRow>
       <div class="sign-note">
         <strong>关于重复签到识别</strong>
@@ -64,46 +51,32 @@
     </div>
 
     <div class="settings-group">
-      <div class="settings-group__title">05 · 签到展示</div>
+      <div class="settings-group__title">04 · 签到展示</div>
       <SettingRow title="签到后进入照片墙" description="完成签到后，头像进入活动照片墙">
         <a-switch v-model:checked="model.enterPhotoWall" />
       </SettingRow>
       <SettingRow title="照片墙名称展示" description="设置照片墙中参与人员名称的展示方式">
-        <a-select v-model:value="model.photoWallNameMode" class="settings-control" :options="nameOptions" />
+        <a-select
+          v-model:value="model.photoWallNameMode"
+          class="settings-control"
+          :options="nameOptions"
+        />
       </SettingRow>
-    </div>
-
-    <div class="settings-group">
-      <div class="settings-group__title">06 · 签到大屏模板</div>
-      <TemplateSelector v-model="model.screen.template" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { watch } from 'vue'
 import { useDictionaryOptions } from '@/hooks/useDictionary'
-import { DATE_TIME_FORMAT, DAY_MILLISECONDS, getDateTimeDifference } from '@/utils/datetime'
 import SettingRow from './setting-row.vue'
-import TemplateSelector from './template-selector.vue'
 
 const model = defineModel({ type: Object, required: true })
-const dateTimeFormat = DATE_TIME_FORMAT
 const modeOptions = useDictionaryOptions('checkin_mode', true)
 const modeDescriptions = {
   1: '无需提前导入人员名单，参与者填写信息后直接完成签到。',
   2: '管理员提前导入人员名单，参与者签到时需要匹配对应的公司及姓名。',
 }
-const timeError = computed(() => {
-  const start = model.value.checkin_start_time
-  const end = model.value.checkin_end_time
-  if (!start || !end) return ''
-  const difference = getDateTimeDifference(start, end)
-  if (!Number.isFinite(difference)) return '签到时间格式无效，请重新选择'
-  if (difference <= 0) return '签到截止时间必须晚于允许开始签到时间'
-  if (difference > 7 * DAY_MILLISECONDS) return '签到开放时长不能超过 7 天'
-  return ''
-})
 watch(
   () => model.value.mode,
   (mode) => {
@@ -150,7 +123,9 @@ const nameOptions = [
   border: 1px solid #e5e5e5;
   border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 
   &:hover {
     border-color: #f2a5a2;
@@ -210,17 +185,9 @@ const nameOptions = [
   }
 }
 
-.sign-time-error {
-  margin: 10px 0 0;
-  color: #ff4d4f;
-  font-size: 13px;
-  line-height: 20px;
-}
-
 @media (max-width: 720px) {
   .sign-mode {
     grid-template-columns: 1fr;
   }
 }
 </style>
-

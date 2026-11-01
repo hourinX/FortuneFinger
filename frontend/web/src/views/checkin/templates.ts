@@ -7,6 +7,7 @@ import LuxeTemplate from './components/LuxeTemplate.vue'
 import GlassTemplate from './components/GlassTemplate.vue'
 import SlotTemplate from './components/SlotTemplate.vue'
 import OrbitTemplate from './components/OrbitTemplate.vue'
+import CrimsonGalaTemplate from './components/CrimsonGala/index.vue'
 
 // 管理端保存稳定的 id，大屏通过此注册表选择对应组件。
 export const checkinTemplates = [
@@ -17,6 +18,7 @@ export const checkinTemplates = [
   { id: 'slot', name: '鎏金游乐场', color: '#d4b27f', component: markRaw(SlotTemplate) },
   { id: 'orbit', name: '同频星系', color: '#74d6d0', component: markRaw(OrbitTemplate) },
   { id: 'grand-gala', name: '同心致远', color: '#e72813', component: markRaw(GrandGalaTemplate) },
+  { id: 'crimson-gala', name: '赤金盛典', color: '#8d161e', component: markRaw(CrimsonGalaTemplate) },
 ] as const
 
 export const defaultTemplateId = 'invitation'

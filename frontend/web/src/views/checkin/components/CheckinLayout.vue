@@ -9,7 +9,6 @@ const state = createCheckinTemplateState(props)
 const {
   event,
   refreshing,
-  refreshVersion,
   closed,
   countdown,
   refreshSeconds,
@@ -114,10 +113,7 @@ const {
             class="qr-frame"
             :class="{ refreshing, closed }"
           >
-            <div
-              :key="refreshVersion"
-              class="qr-placeholder"
-            >
+            <div class="qr-placeholder">
               <span class="corner corner-tl"></span>
               <span class="corner corner-tr"></span>
               <span class="corner corner-bl"></span>

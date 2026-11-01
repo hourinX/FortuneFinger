@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   createCheckinStateSocket,
   getCheckinQRCode,
@@ -9,11 +10,16 @@ import {
   type CheckinStateResp,
 } from '@/api/checkin'
 import LoadingScreen from './components/LoadingScreen.vue'
+import CheckinActivity from './components/checkin-activity/index.vue'
+import CheckinBarrage from './components/checkin-barrage/index.vue'
 import { defaultTemplateId, resolveTemplate } from './templates'
 import { useCheckin, type CheckinContent, type CheckinSource } from './useCheckin'
 
 const loadingCycleDuration = 1600
 const requestRetryDelay = 1500
+const route = useRoute()
+const preview = computed(() => route.query.preview === '1')
+const templateParam = computed(() => String(route.query.template || ''))
 const source = reactive<CheckinSource>({
   qrCode: '',
   status: 'pending',
@@ -31,6 +37,7 @@ const checkin = useCheckin(source)
 const loading = ref(true)
 const configuredTemplate = ref(defaultTemplateId)
 const activeTemplate = computed(() => resolveTemplate(configuredTemplate.value))
+const screenStage = computed(() => source.status === 'ended' ? 'waiting' : 'checkin')
 let mounted = true
 let initialReady = false
 let cycleTimer: number | undefined
@@ -44,6 +51,20 @@ function waitBeforeRetry() {
   return new Promise<void>((resolve) => {
     retryTimer = window.setTimeout(resolve, requestRetryDelay)
   })
+}
+
+function previewCheckinState(): CheckinStateResp {
+  const now = Date.now()
+  return {
+    status: 'active',
+    server_time: new Date(now).toISOString(),
+    activity_start_time: new Date(now - 30 * 60_000).toISOString(),
+    activity_end_time: new Date(now + 3 * 60 * 60_000).toISOString(),
+    checkin_start_time: new Date(now - 15 * 60_000).toISOString(),
+    checkin_end_time: new Date(now + 90 * 60_000).toISOString(),
+    checked_in: 128,
+    total: 200,
+  }
 }
 
 function applyCheckinState(state: CheckinStateResp) {
@@ -61,17 +82,16 @@ function applyCheckinState(state: CheckinStateResp) {
 
 async function refreshQRCode(signal?: AbortSignal) {
   window.clearTimeout(qrRetryTimer)
-  if (source.status !== 'active') {
+  if (preview.value || source.status !== 'active') {
     checkin.setQRCode('')
     return
   }
   try {
-    const qr = await getCheckinQRCode(signal)
+    const qr = await getCheckinQRCode(templateParam.value, signal)
     if (!mounted || source.status !== 'active') return
     checkin.setQRCode(qr.qrcode, qr.expires_at)
   } catch {
     if (!mounted || source.status !== 'active') return
-    checkin.setQRCode('')
     qrRetryTimer = window.setTimeout(() => void refreshQRCode(), 2000)
   }
 }
@@ -81,8 +101,12 @@ async function loadInitialData() {
     requestController = new AbortController()
     try {
       const [template, state] = await Promise.all([
-        getCheckinTemplate(requestController.signal),
-        getCheckinState(requestController.signal),
+        preview.value
+          ? Promise.resolve({ template: templateParam.value })
+          : getCheckinTemplate(templateParam.value, requestController.signal),
+        preview.value
+          ? Promise.resolve(previewCheckinState())
+          : getCheckinState(templateParam.value, requestController.signal),
       ])
       if (!mounted) return
       configuredTemplate.value = template.template
@@ -92,7 +116,7 @@ async function loadInitialData() {
       }
       if (!mounted) return
       initialReady = true
-      connectStateSocket()
+      if (!preview.value) connectStateSocket()
     } catch {
       if (!mounted) return
       await waitBeforeRetry()
@@ -102,7 +126,7 @@ async function loadInitialData() {
 
 async function refreshStateBeforeReconnect() {
   try {
-    const state = await getCheckinState()
+    const state = await getCheckinState(templateParam.value)
     if (mounted) applyCheckinState(state)
   } catch {
     // WebSocket 重连会继续尝试，当前页面保留最后一次有效快照。
@@ -120,7 +144,7 @@ function scheduleSocketReconnect() {
 
 function connectStateSocket() {
   stateSocket?.close()
-  const socket = createCheckinStateSocket()
+  const socket = createCheckinStateSocket(templateParam.value)
   stateSocket = socket
   socket.addEventListener('message', (event) => {
     try {
@@ -184,6 +208,15 @@ onBeforeUnmount(() => {
       :qr="checkin.qr"
       :attendance="checkin.attendance"
       :deadline="checkin.deadline"
+    />
+    <CheckinBarrage
+      v-if="!loading"
+      :active="screenStage === 'checkin' || screenStage === 'waiting'"
+    />
+    <CheckinActivity
+      v-if="!loading"
+      :stage="screenStage"
+      side="right"
     />
   </div>
 </template>

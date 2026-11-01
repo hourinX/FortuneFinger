@@ -22,3 +22,7 @@ export function updatePrize(id, data) {
 export function deletePrize(id) {
   return request.delete(`${API_PREFIX}/${encodeParam(id)}`)
 }
+
+export function getPrizeOptions(params) {
+  return request.get(`${API_PREFIX}/options`, { params })
+}
